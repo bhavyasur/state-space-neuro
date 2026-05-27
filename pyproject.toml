@@ -1,0 +1,13 @@
+[project]
+name = "state-space-neuro"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dynamax>=1.0.1",
+    "numpy>=2.2.6",
+    "pandas>=2.3.3",
+    "requests>=2.34.2",
+    "scipy>=1.15.3",
+]
