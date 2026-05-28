@@ -1,3 +1,6 @@
 [submodule "ssm"]
 	path = ssm
 	url = https://github.com/lindermanlab/ssm
+[submodule "findr"]
+	path = findr
+	url = https://github.com/Brody-Lab/findr
