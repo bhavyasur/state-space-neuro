@@ -1,0 +1,9 @@
+rSLDS:
+- everything needs to be in list form?
+
+
+RNN:
+- the brody model is findr
+
+LFADs:
+

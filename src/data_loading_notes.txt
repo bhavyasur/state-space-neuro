@@ -1,19 +1,7 @@
-WHAT IS ALL THE DATA WE HAVE?
-- encoding conditions: naive, training, expert (and more, but we are
-% ignoring for now)
-
-% FOV (field of vision??) : go barrel and nogo barrel
-
-% time point, licking behavior of animal (binary), reward dispensed
-% (binary), total distance animal ran (analog), running speed (analog)
-% -> have to truncate this with "trial_start" and "trial_end' then
-% concatenate truncated parts
-
-% hit_rate, fa_rate (false alarm), dprime (below 0.5 = naive, above 1.5 =
-% expert)
-
-
-----
+# FIRST 23819 FOV_2: GO DATA
+# SECOND 23819 FOV_2: NOGO DATA
+# THIRD 51521 FOV_2: GO DATA
+# FOURTH 51521 FOV_2: NOGO DATA
 
 FOR EACH MOUSE:
 - there are some number of days that data was calculated
@@ -27,27 +15,25 @@ data to collect:
 
 pool_trunk:
 - date (label)
-- condition 1/2/3
+- condition 1/2/3 (per session)
 
-behavior_data (for each session):
+behavior_data (for each trial within a session):
     arduino_data:
-    - is it a go trial? binary
-    - is it a nogo trial? binary
-    - is it a rejection trial? binary
-    - is it a miss trial? binary
     - hit rate
     - fa rate
     - dprime
-    - calculate classification from dprime
-    behavior:
+]   behavior (parameter vectors):
     - lick_time_concatenated
     - reward_time_concatenated
     - GO_time_concatenated
     - NOGO_time_concatenated
-    trial_break as a column
 
 
-data (calcium imaging data, for each session):
+
+    trial_break - use to separate imaging data into trials
+
+
+data (calcium imaging data, for each session, fully concatenated (so need to split into trials)):
 - deltaFoverF
 - bSpikes
 
@@ -69,13 +55,8 @@ FURTHER TESTS:
 - add data_loading script for om's data
 
 
-RUNNING LIST OF QUESTIONS
-- don't need to use the fa and hit trials directly if using the rejection and miss setdiff calculations, right?
-- think the concatenated sets weren't saved to the folders of data
-- how to combine sessions for a state space model? need some method of time delay
-
+notes from shulan meeting:
 - figure out concatenating, run and have in box folder
 - flow field might be cleaner
-- 
 - some days have behavior data and image data
 - start w single session while writing the code, make i more robust
