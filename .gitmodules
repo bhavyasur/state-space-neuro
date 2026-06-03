@@ -7,3 +7,6 @@
 [submodule "external/lfads-torch"]
 	path = external/lfads-torch
 	url = https://github.com/arsedler9/lfads-torch.git
+[submodule "external/LDNS"]
+	path = external/LDNS
+	url = https://github.com/mackelab/LDNS.git
