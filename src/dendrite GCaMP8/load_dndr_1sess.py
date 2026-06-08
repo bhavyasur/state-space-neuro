@@ -10,6 +10,8 @@ sys.path.append(str(ext))
 
 from autograd import scipy
 import external.ssm
+from utils.utils import mat_to_dict
+
 import matplotlib.pyplot as plt
 import scipy.io
 import pandas as pd
@@ -20,21 +22,6 @@ calcium_data = "data/shulan/#23819M_GCaMP8m_rg_PoM-FOV2/data/#23819M_GCaMP8m_rg_
 manual = "data/shulan/#23819M_GCaMP8m_rg_PoM-FOV2/ManualResults/cell_idx_map.mat" # does NOT change between sessions
 range_full = "data/shulan/#23819M_GCaMP8m_rg_PoM-FOV2/range_full/range.mat" # does NOT change between sessions
 pool_trunk = "data/shulan/pool_trunk_across_sessions.xlsx" # does NOT change between sessions
-
-
-def mat_to_dict(obj):
-    """Recursively convert scipy mat_struct to nested dicts."""
-    if isinstance(obj, scipy.io.matlab.mat_struct):
-        return {field: mat_to_dict(getattr(obj, field))
-                for field in obj._fieldnames}
-    elif isinstance(obj, np.ndarray) and obj.dtype.names:
-        # structured array
-        return {name: mat_to_dict(obj[name]) for name in obj.dtype.names}
-    elif isinstance(obj, np.ndarray) and obj.dtype == object:
-        # array of structs
-        return [mat_to_dict(item) for item in obj.flat]
-    else:
-        return obj  # base case: numbers, strings, plain np arrays
 
 # BEHAVIOR
 mat1 = scipy.io.loadmat(behavior_data)

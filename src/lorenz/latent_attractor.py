@@ -169,7 +169,7 @@ class AttractorDataset(Dataset):
             "rates": self.rates[idx]
         }
 
-class LatentDataset(torch.utils.data.Dataset):
+class LatentDataset(Dataset):
     """Dataset class to store latents from autoencoder for training the diffusion model.
     init takes a dataloader and an autoencoder model.
     """
@@ -308,7 +308,7 @@ if __name__ == "__main__":
         system_name="LorenzCoupled",
         n_neurons=128,
         sequence_length=1024,
-        n_ic=500,
+        n_ic=20,
         mean_spike_count=200,
         random_seed=42,
     )
@@ -318,6 +318,7 @@ if __name__ == "__main__":
 
     sample = dataset[1]
     sample2 = dataset[2]
+    print("np.shape(sample['signal']):", np.shape(sample["signal"]))
 
     # --- DATATYPE DEBUGGING ---
     # print(type(sample["signal"]))
@@ -330,12 +331,12 @@ if __name__ == "__main__":
     plt.figure(figsize=(6, 4))
     plt.imshow(sample2["signal"], aspect="auto")
     plt.colorbar()
-    plt.title("Spike counts samp2")
+    plt.title("Spike counts: Lorenz, num_ic=500")
 
     plt.figure(figsize=(6, 4))
     plt.imshow(sample2["rates"], aspect="auto")
     plt.colorbar()
-    plt.title("Firing rates samp2")
+    plt.title("Firing rates: Lorenz, num_ic=500")
     
     plt.show()
 
