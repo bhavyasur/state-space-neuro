@@ -19,7 +19,7 @@ sns.set_style("white")
 sns.set_context("talk")
 import sklearn as skl
 
-from external.ssm.ssm.util import random_rotation, find_permutation
+from ssm.util import random_rotation, find_permutation
 from src.dual_shank.ds_load_util import load_spikes, psth_firing, select_trial, visualize_trial
 from utils.rslds_util import plot_most_likely_dynamics, plot_observations, plot_trajectory
 from src.dual_shank.ds_PCA import run_PCA

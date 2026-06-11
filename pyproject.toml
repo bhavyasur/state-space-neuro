@@ -19,6 +19,7 @@ dependencies = [
     "h5py>=3.14.0",
     "ipykernel>=7.2.0",
     "ipython>=8.39.0",
+    "jPCA @ git+https://github.com/bantin/jPCA.git",
     "kneed>=0.8.6",
     "loguru>=0.7.3",
     "lovely-tensors>=0.1.22",
@@ -45,6 +46,7 @@ dependencies = [
     "scipy>=1.15.3",
     "seaborn>=0.13.2",
     "setuptools>=81.0.0",
+    "ssm @ git+https://github.com/lindermanlab/ssm.git",
     "tensorflow>=2.21.0",
     "torch>=2.12.0",
     "tqdm>=4.67.3",
@@ -55,3 +57,10 @@ dependencies = [
     "vtk>=9.6.2",
     "wandb>=0.27.0",
 ]
+
+[tool.uv]
+no-build-isolation-package = ["jPCA", "ssm"]
+
+[tool.uv.extra-build-dependencies]
+jPCA=["numpy"]
+ssm=["numpy"]

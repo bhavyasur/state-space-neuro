@@ -18,7 +18,7 @@ sys.path.append(str(ext))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../external/jPCA'))
 
 
-from external.jPCA.jPCA.jPCA import JPCA
+from jPCA.jPCA import JPCA
 
 from utils.elephant_util import random_projection, generate_spiketrains, integrated_lorenz
 from src.dual_shank.ds_load_util import load_spikes, psth_firing, select_trial
