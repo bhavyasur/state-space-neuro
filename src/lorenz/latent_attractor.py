@@ -316,7 +316,8 @@ if __name__ == "__main__":
     # visualize sample
     import matplotlib.pyplot as plt
 
-    sample = dataset[1]
+    sample = dataset[1] # num neurons x sequence length
+    print("dataset shape" + str(np.shape(dataset)))
     sample2 = dataset[2]
     print("np.shape(sample['signal']):", np.shape(sample["signal"]))
 

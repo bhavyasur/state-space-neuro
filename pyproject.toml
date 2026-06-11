@@ -14,10 +14,12 @@ dependencies = [
     "dynamax>=1.0.1",
     "dysts>=0.95",
     "einops>=0.8.2",
+    "elephant>=1.2.0",
     "flax>=0.10.7",
     "h5py>=3.14.0",
     "ipykernel>=7.2.0",
     "ipython>=8.39.0",
+    "kneed>=0.8.6",
     "loguru>=0.7.3",
     "lovely-tensors>=0.1.22",
     "mat73>=0.65",
@@ -36,12 +38,13 @@ dependencies = [
     "pyinspect>=0.1.0",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    "quantities>=0.16.4",
     "requests>=2.34.2",
     "rich>=15.0.0",
     "scikit-learn>=1.5.0",
     "scipy>=1.15.3",
     "seaborn>=0.13.2",
-    "ssm>=0.0.1",
+    "setuptools>=81.0.0",
     "tensorflow>=2.21.0",
     "torch>=2.12.0",
     "tqdm>=4.67.3",
@@ -51,9 +54,4 @@ dependencies = [
     "vedo>=2026.6.1",
     "vtk>=9.6.2",
     "wandb>=0.27.0",
-]
-
-[tool.uv.workspace]
-members = [
-    "external/ssm",
 ]
