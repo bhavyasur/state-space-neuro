@@ -1,3 +1,0 @@
-[submodule "external/LDNS"]
-	path = external/LDNS
-	url = https://github.com/mackelab/LDNS.git
