@@ -16,7 +16,7 @@ ext = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(ext))
 
 from external.LDNS.ldns.utils.utils import set_seed
-from src.lorenz.latent_attractor import AttractorDataset, get_attractor_dataloaders
+from old.lorenz.latent_attractor import AttractorDataset, get_attractor_dataloaders
 from utils.utils import spike_pca, plot_pca
 
 # -----------------

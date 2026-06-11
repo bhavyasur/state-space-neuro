@@ -26,7 +26,7 @@ data = "data/om/07538_M1_Day1_CCA_data.mat"
 def load_spikes(data):
     """
     INPUT: data is a .mat file from the DualShank dataset in Box. this file contains keys 'fpath', 'IntanBehavior', 'M1Spikes', 'M2Spikes'
-    OUTPUT: spikes is a list, each item represents a trial and is a numpy array of (num neurons x timesteps)
+    OUTPUT: spikes is a list, each item represents a neuron and is a numpy array of (num trials x timesteps)
     """
     mat = mat73.loadmat(data)
     # print("mat type: " + str(type(mat))) # datatype debugging
@@ -37,6 +37,10 @@ def load_spikes(data):
     print("dtype spikes[0]", type(spikes[0]))
 
     return spikes
+
+def load_spikes_all_days(data_zipped):
+    """loads the spikes for all days that sessions were taken. essentially, concatenates sessions
+    INPUT: zip file of all sessions to put together. this is specifically for chronic data."""
 
 def psth_firing(spikes, PSTH_length): 
     """calculates firing rate from raw spiking data using Peristimulus Time Histogram

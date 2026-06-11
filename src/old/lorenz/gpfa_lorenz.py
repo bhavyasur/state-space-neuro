@@ -8,7 +8,7 @@ from pathlib import Path
 ext =  Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(ext))
 
-from src.lorenz.latent_attractor import AttractorDataset
+from old.lorenz.latent_attractor import AttractorDataset
 
 
 

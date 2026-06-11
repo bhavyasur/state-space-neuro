@@ -32,9 +32,9 @@ def run_jPCA(data):
     # ----------- DATA LOADING --------------
     spiketrains = np.array(load_spikes(data)) # list of numpy arrays (num_trials, num_neurons, time_steps)
 
-    num_trials = np.shape(spiketrains)[0]
+    num_trials = np.shape(spiketrains)[1]
     trial_length = 3 * pq.s
-    num_spiketrains = np.shape(spiketrains)[1]
+    num_spiketrains = np.shape(spiketrains)[0]
     num_timesteps = np.shape(spiketrains)[2]
 
     # calculate instantaneous rate
@@ -159,4 +159,4 @@ def run_jPCA(data):
     plt.tight_layout()
     plt.show()
 
-    return plat_x
+    return int(plat_x)

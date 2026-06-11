@@ -14,7 +14,7 @@ from pathlib import Path
 ext = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(ext))
 
-from external.jPCA.jPCA import JPCA
+from jPCA.jPCA import JPCA
 
 from utils.elephant_util import random_projection, generate_spiketrains, integrated_lorenz
 

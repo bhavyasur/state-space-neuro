@@ -52,7 +52,7 @@ def plot_most_likely_dynamics(model,
     alpha=0.8, ax=None, figsize=(3, 3)):
     
     K = model.K
-    assert model.D == 2
+    assert model.D >= 2
     x = np.linspace(*xlim, nxpts)
     y = np.linspace(*ylim, nypts)
     X, Y = np.meshgrid(x, y)
@@ -65,7 +65,7 @@ def plot_most_likely_dynamics(model,
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111)
 
-    for k, (A, b) in enumerate(zip(model.dynamics.As, model.dynamics.bs)):
+    for k, (A, b) in enumerate(zip(model.dynamics.As[:, :2, :2], model.dynamics.bs[:, :2])):
         dxydt_m = xy.dot(A.T) + b - xy
 
         zk = z == k
