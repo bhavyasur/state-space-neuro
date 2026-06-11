@@ -1,12 +1,3 @@
-[submodule "ssm"]
-	path = external/ssm
-	url = https://github.com/lindermanlab/ssm
-[submodule "findr"]
-	path = external/findr
-	url = https://github.com/Brody-Lab/findr
-[submodule "external/lfads-torch"]
-	path = external/lfads-torch
-	url = https://github.com/arsedler9/lfads-torch.git
 [submodule "external/LDNS"]
 	path = external/LDNS
 	url = https://github.com/mackelab/LDNS.git
