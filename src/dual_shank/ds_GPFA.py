@@ -143,3 +143,6 @@ def run_GPFA(data):
     plt.show()
 
     return int(plat_x)
+
+if __name__ == "__main__":
+    run_GPFA(data)

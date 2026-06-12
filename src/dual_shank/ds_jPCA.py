@@ -160,3 +160,6 @@ def run_jPCA(data):
     plt.show()
 
     return int(plat_x)
+
+if __name__ == "__main__":
+    run_jPCA(data)

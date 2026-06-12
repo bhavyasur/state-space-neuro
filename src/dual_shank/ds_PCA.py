@@ -139,3 +139,6 @@ def run_PCA(data):
     plt.show()
 
     return int(x_dims[elbow])
+
+if __name__ == "__main__":
+    run_PCA(data)

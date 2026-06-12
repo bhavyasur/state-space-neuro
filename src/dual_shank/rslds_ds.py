@@ -64,9 +64,9 @@ D_obs = num_neurons
 #
 
 # ------------ INSTANTIATE RSLDS OBJECT ------------ #
-K = 1 # should depend on held-out cross validation
+K = 4 # should depend on held-out cross validation
 y = full.T
-D_latent = 5
+D_latent = 2
 print(y.shape)
 
 rslds = ssm.SLDS(D_obs, K, D_latent,
@@ -89,14 +89,17 @@ plt.plot(q_elbos_lem[1:], label="Laplace-EM")
 plt.legend()
 plt.xlabel("Iteration")
 plt.ylabel("ELBO")
+plt.show()
 
 ax3 = plt.subplot(111)
 plot_trajectory(zhat_lem, xhat_lem, ax=ax3)
 plt.title("Inferred, Laplace-EM")
 plt.tight_layout()
+plt.show()
 
 plt.figure(figsize=(6,4))
 ax = plt.subplot(111)
 lim = abs(xhat_lem).max(axis=0) + 1
 plot_most_likely_dynamics(rslds_lem, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax)
 plt.title("Inferred Dynamics, Laplace-EM")
+plt.show()
