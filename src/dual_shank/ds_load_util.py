@@ -225,12 +225,12 @@ def full_session(spikes):
 
 def visualize_trial(trial_spikelist, trial_rates, trial_idx):
     plt.figure(figsize=(6, 4))
-    plt.imshow(trial_spikelist, aspect="auto", cmap="inferno")
+    plt.imshow(trial_spikelist, aspect="auto", cmap="Greys")
     plt.colorbar()
     plt.title("Spike counts: Trial " + str(trial_idx))
 
     plt.figure(figsize=(6, 4))
-    plt.imshow(trial_rates, aspect="auto", cmap="inferno")
+    plt.imshow(trial_rates, aspect="auto", cmap="Greys")
     plt.colorbar()
     plt.title("Firing Rates: Trial-Averaged, All Neurons")
 
@@ -239,12 +239,12 @@ def visualize_trial(trial_spikelist, trial_rates, trial_idx):
 
 def visualize_session(full_spikes, trial_rates):
     plt.figure(figsize=(6, 4))
-    plt.imshow(full_spikes, aspect="auto", cmap="inferno")
+    plt.imshow(full_spikes, aspect="auto", cmap="Greys")
     plt.colorbar()
     plt.title("Spike counts: Trials Concatenated")
 
     plt.figure(figsize=(6, 4))
-    plt.imshow(trial_rates, aspect="auto", cmap="inferno")
+    plt.imshow(trial_rates, aspect="auto", cmap="Greys")
     plt.colorbar()
     plt.title("Firing Rates: Trial-Averaged, All Neurons")
 
@@ -255,44 +255,44 @@ def visualize_session(full_spikes, trial_rates):
 # ---------- running things but ignore for now
 
 if __name__ == "__main__":
-    # spikes = load_spikes(data)
+    spikes = load_spikes(data)
 
-    # idx = load_spike_idx(data)
-    # print("spike idx", np.shape(idx))
-    # print(idx.dtype)
+    idx = load_spike_idx(data)
+    print("spike idx", np.shape(idx))
+    print(idx.dtype)
 
-    # flat = full_session(spikes)
+    flat = full_session(spikes)
 
-    # print(flat.shape)
+    print(flat.shape)
 
-    # scipy.io.savemat('output/dual_shank/full_sess_07538_day1.mat', {'matrix': flat})
+    scipy.io.savemat('output/dual_shank/full_sess_07538_day1.mat', {'matrix': flat})
 
-    # trial0_spikelist = select_trial(spikes, 0)
-    # print("trial0_spikelist shape:", np.shape(trial0_spikelist))
+    trial0_spikelist = select_trial(spikes, 0)
+    print("trial0_spikelist shape:", np.shape(trial0_spikelist))
 
-    # rates =psth_firing(spikes, 3)
-    # print("rates shape:", np.shape(rates))  
+    rates =psth_firing(spikes, 3)
+    print("rates shape:", np.shape(rates))  
 
-    # visualize_session(flat, rates)
+    visualize_session(flat, rates)
 
     # visualize_trial(trial0_spikelist, rates, 0)
 
-    rel = combine_days(zipped)
+    # rel = combine_days(zipped)
 
-    print("rel[0] shape, should be 2d array", np.shape(rel[0]))
+    # print("rel[0] shape, should be 2d array", np.shape(rel[0]))
 
-    print("rel[1] shape", np.shape(rel[1]))
+    # print("rel[1] shape", np.shape(rel[1]))
 
-    print("rel[2] shape", np.shape(rel[2]))
+    # print("rel[2] shape", np.shape(rel[2]))
 
-    print("rel[3] shape", np.shape(rel[3]))
+    # print("rel[3] shape", np.shape(rel[3]))
 
-    print("rel[4] shape", np.shape(rel[4]))
+    # print("rel[4] shape", np.shape(rel[4]))
 
-    print("rel[40] shape", np.shape(rel[40]))
+    # print("rel[40] shape", np.shape(rel[40]))
 
-    print("rel[60] shape", np.shape(rel[60]))
+    # print("rel[60] shape", np.shape(rel[60]))
 
-    print("rel[73] shape", np.shape(rel[73]))
+    # print("rel[73] shape", np.shape(rel[73]))
 
-    print("rel[0] dtype, should be array", rel[0].dtype)
+    # print("rel[0] dtype, should be array", rel[0].dtype)

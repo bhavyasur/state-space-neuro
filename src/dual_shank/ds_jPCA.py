@@ -89,7 +89,7 @@ def run_jPCA(data):
     print("shape of binned_trials", np.shape(binned_trials))
 
     # per-trial arrays
-    trial_list = [binned_trials[i].T.astype(float) for i in range(num_trials)] 
+    trial_list = [binned_trials[:, i, :].T.astype(float) for i in range(num_trials)] 
     bin_size = 1 * pq.ms
     n_bins = binned_trials.shape[2]
     times_binned = list(np.arange(n_bins) * bin_size)
@@ -132,7 +132,8 @@ def run_jPCA(data):
     explained_variances = []
 
     # per-trial arrays
-    trial_list = [binned_trials[i].T.astype(float) for i in range(num_trials)] 
+    # cross-validation section - same fix
+    trial_list = [binned_trials[:, i, :].T.astype(float) for i in range(num_trials)]     
 
     for x_dim in x_dims:
         jpca_cv = JPCA(num_jpcs=x_dim)

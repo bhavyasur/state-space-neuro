@@ -70,7 +70,7 @@ def run_PCA(data):
 
     pca_3dim = PCA(n_components=latent_dimensionality)
 
-    # binned_trials is (num_trials, num_neurons, n_bins)
+    # binned_trials is (num_neurons, num_trials, n_bins)
     binned_trials = spiketrains
     print("shape of binned_trials", np.shape(binned_trials))
 
@@ -82,8 +82,8 @@ def run_PCA(data):
 
     # (n_trials, n_bins, 3)
     trajectories = np.array([
-        pca_3dim.transform(trial.T)  # trial shape: (n_neurons, n_bins) -> .T -> (n_bins, n_neurons)
-        for trial in binned_trials
+        pca_3dim.transform(binned_trials[:, trial_idx, :].T)  # (num_neurons, n_bins).T -> (n_bins, num_neurons) ✓
+        for trial_idx in range(num_trials)
     ])  # shape: (n_trials, n_bins, 3)
 
     f = plt.figure(figsize=(15, 5))
@@ -116,7 +116,7 @@ def run_PCA(data):
     plt.show()
 
     # --------------- CROSS-VALIDATION --------------
-    x_dims = [1, 2, 3, 4, 5]
+    x_dims = [3, 6, 9, 12, 15]
     explained_variances = []
 
     X_all = binned_trials.transpose(0, 2, 1).reshape(-1, num_spiketrains)

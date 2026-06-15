@@ -74,15 +74,15 @@ def run_GPFA(data):
     times = [np.nonzero(spiketrains[i]) for i in range(len(spiketrains))]
 
     spiketrain_list = []
-    for trial in spiketrains:
+    for trial_idx in range(num_trials):
         trial_trains = []
-        for idx in range(trial.shape[0]):
-            times = np.where(trial[idx] > 0)[0]
+        for neuron_idx in range(num_spiketrains):
+            times = np.where(spiketrains[neuron_idx][trial_idx] > 0)[0]
 
             st = neo.SpikeTrain(
                 times=times,
                 units=pq.ms,
-                t_stop=trial.shape[1]
+                t_stop=spiketrains[neuron_idx].shape[1]
             )
             trial_trains.append(st)
         spiketrain_list.append(trial_trains)
@@ -120,7 +120,7 @@ def run_GPFA(data):
     # ---------------- CROSS VALIDATION --------------------
     from sklearn.model_selection import cross_val_score
 
-    x_dims = [2, 5, 7, 8, 9, 10, 11, 14]
+    x_dims = [2, 5, 7, 9, 11, 13]
     log_likelihoods = []
     for x_dim in x_dims:
         gpfa_cv = GPFA(x_dim=x_dim)
