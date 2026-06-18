@@ -42,7 +42,7 @@ def cross_val(raw_data, heldout_frac=0.1, n_repeats=3, var_threshold = 0.9, **kw
             for fold, (train_idx, test_idx) in enumerate(kfold.split(binned)):
                 train = list(binned[train_idx])
                 print("train shape", np.shape(train))
-                test = list(binned[test_idx])
+                test = [binned[test_idx]]
                 print("test shape", np.shape(train))
 
                 model, b, c, d, e = run_rslds_binned(train, state, dim)
@@ -51,13 +51,16 @@ def cross_val(raw_data, heldout_frac=0.1, n_repeats=3, var_threshold = 0.9, **kw
                 true_obs = []
 
                 for trial in test:
-                    elbo, q_x = model.approximate_posterior(trial, method="laplace_em")
-                    x_mean = q_x.mean
+                    elbo, q_x = model.approximate_posterior([trial], method="laplace_em")
+                    x_mean = q_x.mean[0]
+
+                    z_hat = model.most_likely_states(x_mean, trial) 
+
                     # Project latents back to raw observation space
                     Cs = model.emissions.Cs
                     ds = model.emissions.ds
-                    y_pred = np.dot(x_mean, Cs.T) + ds
-                    
+                    y_pred = np.array([Cs[z] @ x_mean[t] + ds[z] for t, z in enumerate(z_hat)])
+    
                     predictions.append(y_pred)
                     true_obs.append(trial)
                 

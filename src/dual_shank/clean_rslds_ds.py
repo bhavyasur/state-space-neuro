@@ -30,10 +30,13 @@ def plot_eigenvalues():
 
 def run_rslds_binned(binned, disc_states, latent_dims, plot: bool = False):
     # binned is one numpy array (num_timesteps, num_neurons)
-    y = [np.asarray(binned)]
+    a = [binned]
+    y = np.asarray(a)
     #y is (1, num_timesteps, num_neurons), dtype list of numpy arrays
     
     print("y shape", np.shape(y))
+    print("y[0] shape", np.shape(np.asarray(y[0])))
+    print("y[0] type", np.asarray(y[0]).dtype)
 
     num_obs = np.shape(y)[2]
     num_neurons = num_obs
@@ -47,8 +50,8 @@ def run_rslds_binned(binned, disc_states, latent_dims, plot: bool = False):
     T = np.shape(y)[1]
     inputs = [np.zeros((num_obs,num_obs))]
 
-    rslds.initialize(y, inputs=None, verbose=1)
-    q_elbos_lem, q_lem = rslds.fit(y, method="laplace_em",
+    rslds.initialize(y[0], inputs=None, verbose=1)
+    q_elbos_lem, q_lem = rslds.fit(y[0], method="laplace_em",
                                 variational_posterior="structured_meanfield",
                                 initialize=False, num_iters=50)
     xhat_lem = q_lem.mean_continuous_states[0]
