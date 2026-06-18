@@ -10,9 +10,9 @@ from types import SimpleNamespace
 from typing import Union, Optional
 from pathlib import Path
 
-from lfads_modules.decoder import Decoder
-from lfads_modules.priors import MultivariateNormal
-from lfads_modules.readout import FanInLinear
+from external.lfads.lfads_sampler.lfads_modules.decoder import Decoder
+from external.lfads.lfads_sampler.lfads_modules.priors import MultivariateNormal
+from external.lfads.lfads_sampler.lfads_modules.readout import FanInLinear
 
 
 class LFADSSampler:

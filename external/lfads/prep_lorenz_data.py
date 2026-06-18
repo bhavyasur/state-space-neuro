@@ -26,7 +26,7 @@ save_path = Path("src/lfads/data/datasets/lorenz.h5")
 # pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
 
 # ---- Helper funcs ---- #
-from src.lorenz.latent_attractor import get_attractor_dataloaders
+from old.lorenz.latent_attractor import get_attractor_dataloaders
 
 # ---- Generate data ---- #
 # create dataloaders for train/val/test splits
