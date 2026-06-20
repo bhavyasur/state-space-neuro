@@ -135,93 +135,141 @@ def run_rslds(raw_data, disc_states, latent_dims, plot: bool = False):
 
     return rslds_lem, xhat_lem, zhat_lem, q_elbos_lem, q_lem
 
-    # ---- eigenvalues ----
-
-def pca_for_rslds(D, datas, masks=None, num_iters=20, feature_names=None, group_labels=None, plot: bool = False):
+def run_rslds_pca_flowfield(data, disc_states, latent_dims, plot: bool = True,
+                             nxpts=20, nypts=20, alpha=0.8, margin=1.0):
     """
-    Executes pca_with_imputation and generates a comprehensive 2D biplot.
-    
-    Parameters:
-    - D: Number of PCA components to fit. Must be >= 2.
-    - datas: Array or list/tuple of arrays to run PCA on.
-    - masks: Optional missing data boolean mask(s).
-    - num_iters: Number of EM-style imputation iterations.
-    - feature_names: List of strings for feature names. (OPTIONAL)
-    - group_labels: List of strings to label each distinct sub-dataset. (OPTIONAL)
+    Run rSLDS on a full session of data, then PCA-project the resulting latent trajectory
+    to 2D and plot the flow field of each discrete state's dynamics in PC space.
+
+    Mirrors run_rslds(), but instead of plotting raw latent dims 1 vs 2
+    (which only makes sense if latent_dims == 2), this runs PCA on xhat_lem
+    (T x latent_dims) to get a 2D embedding, then projects each state's
+    affine dynamics (A_k, b_k) into that same PC space so the flow field
+    arrows are consistent with the plotted trajectory.
+
+    Math: if p = W^T (x - mu) is the PC-space point (W: D x 2 PCA loadings,
+    mu: D-dim mean of xhat_lem), and the latent dynamics are x' = A x + b,
+    then substituting x = W p + mu:
+        x' = A(W p + mu) + b
+        p' = W^T (x' - mu) = W^T A W p + W^T (A mu + b - mu)
+    So in PC space: p' = A_pc p + b_pc, where
+        A_pc = W^T A W            (2x2)
+        b_pc = W^T (A @ mu + b - mu)   (2,)
+    This is the standard linear-projection result for affine dynamics.
     """
-    if D < 2:
-        raise ValueError("D (components) must be at least 2 to generate a 2D biplot.")
+    from sklearn.decomposition import PCA
 
-    pca, xs, ll = pca_with_imputation(D, datas, masks=masks, num_iters=num_iters)
-    
-    if plot == True:
-        fig, (ax_var, ax_biplot) = plt.subplots(1, 2, figsize=(16, 7.5))
+    # data = full.T, data is a full sessiont transposed to be (num_timesteps * num_trials, num_neurons)
+    y = bin_smooth(data).astype(int)
 
-        # PANEL 1: VARIANCE EXPLAINED PLOT (SCREE PLOT)
-        # ----------------------------------------------------
-        var_exp = pca.explained_variance_ratio_ * 100
-        cum_var_exp = np.cumsum(var_exp)
-        pcs = np.arange(1, len(var_exp) + 1)
-        
-        # Bar plot for individual variance
-        bars = ax_var.bar(pcs, var_exp, alpha=0.6, color='steelblue', label='Individual Variance')
-        # Line plot for cumulative variance
-        line = ax_var.plot(pcs, cum_var_exp, marker='o', color='darkorange', linewidth=2, label='Cumulative Variance')
-        
-        # Add values on top of the bars
-        for bar in bars:
-            height = bar.get_height()
-            ax_var.text(bar.get_x() + bar.get_width()/2., height + 1, f'{height:.1f}%', 
-                        ha='center', va='bottom', fontsize=9)
-            
-        ax_var.set_xlabel('Principal Components', fontsize=12)
-        ax_var.set_ylabel('Variance Explained (%)', fontsize=12)
-        ax_var.set_title('Variance Explained by Component', fontsize=13, weight='bold', pad=10)
-        ax_var.set_xticks(pcs)
-        ax_var.set_xticklabels([f'PC{i}' for i in pcs])
-        ax_var.set_ylim(0, 105)
-        ax_var.grid(True, linestyle='--', alpha=0.3)
-        ax_var.legend(loc='upper left')
+    print("y shape", np.shape(y))
 
-        # ----------------------------------------------------
-        # PANEL 2: PCA BIPLOT
-        # ----------------------------------------------------
-        # Plot Data Points (Scores) group-by-group from xs
-        colors = plt.cm.tab10(np.linspace(0, 1, len(xs)))
-        for i, x_group in enumerate(xs):
-            label = group_labels[i] if group_labels else f'Dataset {i+1}'
-            ax_biplot.scatter(x_group[:, 0], x_group[:, 1], alpha=0.6, color=colors[i], label=label)
-            
-        # Compute and Plot Feature Loadings Vectors
-        loadings = pca.components_.T * np.sqrt(pca.explained_variance_)
-        num_features = loadings.shape[0]
-        
-        if feature_names is None:
-            feature_names = [f'Var {j+1}' for j in range(num_features)]
-            
-        for j in range(num_features):
-            # Draw vector arrows
-            ax_biplot.arrow(0, 0, loadings[j, 0], loadings[j, 1], 
-                            head_width=0.04, head_length=0.04, fc='darkred', ec='darkred', alpha=0.85, zorder=5)
-            # Draw text labels
-            ax_biplot.text(loadings[j, 0] * 1.15, loadings[j, 1] * 1.15, feature_names[j], 
-                        color='darkred', fontsize=11, ha='center', va='center', weight='bold', zorder=6)
+    rslds = ssm.SLDS(num_obs, disc_states, latent_dims,
+                      transitions="recurrent_only",
+                      emissions="poisson_orthog",
+                      emission_kwargs=dict(link="softplus"))
 
-        # Biplot Formatting
-        ax_biplot.set_xlabel(f'PC1 ({var_exp[0]:.1f}% Variance Explained)', fontsize=12)
-        ax_biplot.set_ylabel(f'PC2 ({var_exp[1]:.1f}% Variance Explained)', fontsize=12)
-        ax_biplot.set_title(f'PCA Biplot (Log-Likelihood: {ll:.2f})', fontsize=13, weight='bold', pad=10)
-        ax_biplot.axhline(0, color='black', linestyle=':', alpha=0.4)
-        ax_biplot.axvline(0, color='black', linestyle=':', alpha=0.4)
-        ax_biplot.grid(True, linestyle='--', alpha=0.3)
-        ax_biplot.legend(loc='best')
-        ax_biplot.axis('equal')
+    rslds.initialize(y, verbose=1)
+    q_elbos_lem, q_lem = rslds.fit(y, method="laplace_em",
+                                    variational_posterior="structured_meanfield",
+                                    initialize=False, num_iters=50)
+    xhat_lem = q_lem.mean_continuous_states[0]          # (T, latent_dims)
+    zhat_lem = rslds.most_likely_states(xhat_lem, y)    # (T,)
+    yhat_lem = rslds.smooth(xhat_lem, y)
 
-        # Global adjustments
+    rslds_lem = copy.deepcopy(rslds)
+
+    # ---- PCA on the latent trajectory ----
+    pca = PCA(n_components=2)
+    x_pc = pca.fit_transform(xhat_lem)   # (T, 2)
+    W = pca.components_.T                # (latent_dims, 2) loading matrix
+    mu = pca.mean_                       # (latent_dims,)
+
+    if plot:
+        plt.figure()
+        plt.plot(q_elbos_lem[1:], label="Laplace-EM")
+        plt.legend()
+        plt.title("ELBO Plot")
+        plt.xlabel("Iteration")
+        plt.ylabel("ELBO")
+        plt.show()
+
+        ax3 = plt.subplot(111)
+        plot_trajectory(zhat_lem, x_pc, ax=ax3)
+        plt.title("Inferred Trajectory in PC Space, Laplace-EM")
+        plt.xlabel("PC1")
+        plt.ylabel("PC2")
         plt.tight_layout()
         plt.show()
-        
-    return pca, xs, ll
+
+        fig = plt.figure(figsize=(6, 4))
+        ax = fig.add_subplot(111)
+        lim = abs(x_pc).max(axis=0) + margin
+        plot_pca_flowfield(rslds_lem, W, mu,
+                            xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]),
+                            nxpts=nxpts, nypts=nypts, alpha=alpha, ax=ax)
+        plt.title("Inferred Dynamics (PCA Flow Field), Laplace-EM")
+        plt.show()
+
+    return rslds_lem, xhat_lem, x_pc, zhat_lem, q_elbos_lem, q_lem, pca
+
+
+def plot_pca_flowfield(model, W, mu,
+                        xlim=(-4, 4), ylim=(-3, 3), nxpts=20, nypts=20,
+                        alpha=0.8, ax=None, figsize=(4, 4)):
+    """
+    Plot the flow field of each discrete state's dynamics, projected into
+    a 2D PCA space.
+
+    model: fitted rSLDS/SLDS model (has model.dynamics.As, model.dynamics.bs,
+           model.transitions.Rs, model.transitions.r)
+    W:     (D, 2) PCA loading matrix (pca.components_.T)
+    mu:    (D,) PCA mean (pca.mean_)
+    xlim, ylim: bounds of the 2D PC grid to evaluate the flow field over
+    """
+    K = model.K
+    D = model.D
+
+    x = np.linspace(*xlim, nxpts)
+    y = np.linspace(*ylim, nypts)
+    X, Y = np.meshgrid(x, y)
+    pc_grid = np.column_stack((X.ravel(), Y.ravel()))   # (G, 2) grid points in PC space
+
+    # Map grid points back to full latent space to determine discrete state
+    # at each location: x_full = W @ p + mu
+    x_full = pc_grid.dot(W.T) + mu   # (G, D)
+
+    # Discrete state assignment using the model's recurrent transition params
+    # (same logic as plot_most_likely_dynamics, but evaluated at the
+    # back-projected full-dimensional points)
+    z = np.argmax(x_full.dot(model.transitions.Rs.T) + model.transitions.r, axis=1)
+
+    if ax is None:
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(111)
+
+    for k in range(K):
+        A = model.dynamics.As[k]   # (D, D)
+        b = model.dynamics.bs[k]   # (D,)
+
+        # Project affine dynamics into PC space:
+        # p' = W^T A W p + W^T (A @ mu + b - mu)
+        A_pc = W.T.dot(A).dot(W)                      # (2, 2)
+        b_pc = W.T.dot(A.dot(mu) + b - mu)             # (2,)
+
+        dpdt = pc_grid.dot(A_pc.T) + b_pc - pc_grid    # (G, 2)
+
+        zk = z == k
+        if zk.sum() > 0:
+            ax.quiver(pc_grid[zk, 0], pc_grid[zk, 1],
+                      dpdt[zk, 0], dpdt[zk, 1],
+                      color=colors[k % len(colors)], alpha=alpha)
+
+    ax.set_xlabel('PC1')
+    ax.set_ylabel('PC2')
+    plt.tight_layout()
+    return ax
+
 
 if __name__ == "__main__":
     raw = "data/om/07538_M1_Day1_CCA_data.mat" # selected data
@@ -233,13 +281,11 @@ if __name__ == "__main__":
     num_neurons = np.shape(full)[0]
     num_obs = num_neurons
     data = full.T
-    y = bin_smooth(data).astype(int)
+    # y = bin_smooth(data).astype(int)
 
     # ------------
     
-    disc_states = 3 # should depend on held-out cross validation
-    latent_dims = 8
-    pca, x, y = pca_for_rslds(latent_dims, datas=y, masks=None, plot=True)
-    print("pca:", np.shape(pca.components_))
+    disc_states = 5 # should depend on held-out cross validation
+    latent_dims = 10
     
-    # run_rslds(data, disc_states, latent_dims, plot=True)
+    run_rslds_pca_flowfield(data, disc_states, latent_dims, plot=True)
