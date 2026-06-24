@@ -7,7 +7,7 @@ from pathlib import Path
 ext = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(ext))
 from src.dual_shank.ds_load_util import load_spikes, psth_firing, select_trial, visualize_trial, full_session
-from utils.rslds_util import bin_smooth
+from rslds.rslds_util import bin_smooth
 from src.dual_shank.clean_rslds_ds import run_rslds, run_rslds_binned
 from sklearn.model_selection import KFold, cross_val_score
 from sklearn.decomposition import PCA
@@ -138,7 +138,7 @@ def cross_val(raw_data, heldout_frac=0.1, n_repeats=3, var_threshold=0.8, **kwar
 
 
 if __name__ == "__main__":
-    raw_data = "data/om/07538_M1_Day1_CCA_data.mat"
+    raw_data = "data/om/87564_M1R_Day12DualShank_41c324t.mat"
     # spks = load_spikes(raw_data)
     # full = full_session(spks) #
     # binned = bin_smooth(full.T).astype(int)

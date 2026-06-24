@@ -17,10 +17,10 @@ import ssm
 import copy
 from ssm.util import random_rotation, find_permutation
 from src.dual_shank.ds_load_util import load_spikes, psth_firing, select_trial, visualize_trial, full_session
-from utils.rslds_util import plot_most_likely_dynamics, plot_observations, plot_trajectory, bin_only, bin_smooth
-from src.dual_shank.ds_PCA import run_PCA
-from src.dual_shank.ds_jPCA import run_jPCA
-from src.dual_shank.ds_GPFA import run_GPFA
+from rslds.rslds_util import plot_most_likely_dynamics, plot_observations, plot_trajectory, bin_only, bin_smooth
+from dual_shank.dim_reduc.ds_PCA import run_PCA
+from dual_shank.dim_reduc.ds_jPCA import run_jPCA
+from dual_shank.dim_reduc.ds_GPFA import run_GPFA
 
 color_names = ["windows blue", "red", "amber", "faded green"]
 colors = sns.xkcd_palette(color_names)

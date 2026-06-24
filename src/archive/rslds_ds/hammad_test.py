@@ -14,7 +14,7 @@ from pathlib import Path
 ext = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(ext))
 
-from utils.rslds_util import plot_trajectory, plot_most_likely_dynamics
+from rslds.rslds_util import plot_trajectory, plot_most_likely_dynamics
 
 def compute_binned_spike_data(spike_data, sigma = 5, bin_size_ms = 10):
     """

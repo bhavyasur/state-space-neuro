@@ -16,7 +16,7 @@ ext = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(ext))
 
 from src.dual_shank.ds_load_util import load_spikes, psth_firing, select_trial, visualize_trial, full_session
-from utils.rslds_util import bin_smooth
+from rslds.rslds_util import bin_smooth
     
 @ensure_args_are_lists
 def rslds_cross_val(
