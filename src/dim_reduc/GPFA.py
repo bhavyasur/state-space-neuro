@@ -21,69 +21,77 @@ from src.dual_shank.ds_load_util import psth_firing, load_spikes, select_trial, 
 class DataType(Enum):
     EPhys = "ephys"
     Calcium = "calcium"
+    Bessel = "bessel"
 
-def run_GPFA(data, type: DataType):
+def run_GPFA(data, plot_key, latent_dims=3, type=DataType):
+
+    # --------------- DATA LOADING ---------------
+
     if type is DataType.EPhys:
-        ## LOAD UR DATA SO THAT YOU HAVE (num_neurons, num_timesteps) - TRIAL CONCATENATED
-        # ----------- DATA LOADING --------------
-        spiketrains = np.array(load_spikes(data)) # list of numpy arrays (num_neurons, num_trials, time_steps)
-        full = full_session(spiketrains) # returns (num_neurons, num_timesteps)
+        """ Your 'data' should be a .mat file, where each cell is an individual neuron and each cell contains an array 
+            of (num_trials * num_timesteps). load_spikes converts this to a list of numpy arrays, where 
+            each object in the list is a neuron, the numpy array is (num_trials, num_timesteps) """
+        
+        spiketrains = np.array(load_spikes(data)) # now: list of numpy arrays (num_neurons, num_trials, time_steps)
+        full = full_session(spiketrains) # now: trial-concatenated (num_neurons, num_timesteps)
+
         num_trials = np.shape(spiketrains)[1]
         trial_length = 3 * pq.s
 
-        num_spiketrains = np.shape(spiketrains)[0]
+        num_neurons = np.shape(spiketrains)[0] # same as number of neurons
         num_timesteps = np.shape(spiketrains)[2]
 
         # calculate instantaneous rate
         instantaneous_rates = psth_firing(spiketrains, trial_length)
     
     elif type is DataType.Calcium:
-        
+        1
+    
 
-    # -------------- PLOTTING LORENZ SPIKE TRAINS AND TRAJECTORY --------------
+    # --------------- PLOTTING DATA ITSELF ---------------
 
-    f = plt.figure(figsize=(10, 7))
-    ax1 = f.add_subplot(2,1,1)
-    ax2 = f.add_subplot(2,1,2)
+    if type is DataType.EPhys:
+        f = plt.figure(figsize=(10, 7))
+        ax1 = f.add_subplot(2,1,1)
+        ax2 = f.add_subplot(2,1,2)
 
-    trial_to_plot = 0
-    trial_set = select_trial(spiketrains, trial_to_plot)
-    ax1.set_title(f'Raster plot of trial {trial_to_plot}')
-    ax1.set_xlabel('Time (s)')
-    ax1.set_ylabel('Neuron id')
+        ax1.set_title(f'Raster plot of {plot_key}')
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Neuron id')
 
-    im1 = ax1.imshow(
-            trial_set, 
-            aspect="auto"
-            )
-    cbar1 = f.colorbar(im1, ax=ax1, label='Spike Trains')
+        im1 = ax1.imshow(
+                full, 
+                aspect="auto"
+                )
 
-    time_bins = np.linspace(0, int(trial_length), num_timesteps)
-    ax2.set_title('PSTH plot of firing rates')
-    ax2.set_xlabel('Time [s]')
-    ax2.set_ylabel('Firing Rate (Hz)')
+        time_bins = np.linspace(0, int(trial_length), num_timesteps)
+        ax2.set_title(f'PSTH firing rates of {plot_key}')
+        ax2.set_xlabel('Time [s]')
+        ax2.set_ylabel('Firing Rate (Hz)')
 
-    im2 = ax2.imshow(
-        instantaneous_rates,
-        aspect='auto',
-        extent=[time_bins[0], time_bins[-1], 0, num_spiketrains],
-        origin='lower'
-    )
-    cbar2 = f.colorbar(im2, ax=ax2, label='Firing Rate (Hz)')
+        im2 = ax2.imshow(
+            instantaneous_rates,
+            aspect='auto',
+            extent=[time_bins[0], time_bins[-1], 0, num_neurons],
+            origin='lower'
+        )
 
-    plt.tight_layout()
-    plt.show()
+        plt.tight_layout()
+        plt.show()
 
-    # ----------------- APPLY GPFA -------------------
+    elif type is DataType.Calcium:
+        1
+
+    # --------------- APPLY GPFA ---------------
     # specify fitting parameters
-    bin_size = 20 * pq.ms
-    latent_dimensionality = 3
-    times = [np.nonzero(spiketrains[i]) for i in range(len(spiketrains))]
+    bin_size = 10 * pq.ms
+    latent_dimensionality = latent_dims
+    times = list(np.nonzero(spiketrains[i:]) for i in range(np.shape(spiketrains)[0]))
 
     spiketrain_list = []
     for trial_idx in range(num_trials):
         trial_trains = []
-        for neuron_idx in range(num_spiketrains):
+        for neuron_idx in range(num_neurons):
             times = np.where(spiketrains[neuron_idx][trial_idx] > 0)[0]
 
             st = neo.SpikeTrain(
@@ -93,6 +101,8 @@ def run_GPFA(data, type: DataType):
             )
             trial_trains.append(st)
         spiketrain_list.append(trial_trains)
+
+    print("spiketrain list shape", np.shape(spiketrain_list))
 
     gpfa_3dim = GPFA(bin_size=bin_size, x_dim=latent_dimensionality)
     trajectories = gpfa_3dim.fit_transform(spiketrain_list)
@@ -107,7 +117,7 @@ def run_GPFA(data, type: DataType):
     linewidth_trial_average = 2
     color_trial_average = 'C1'
 
-    ax2.set_title('Latent dynamics extracted by GPFA')
+    ax2.set_title(f'GPFA Latent dynamics: {plot_key}')
     ax2.set_xlabel('Dim 1')
     ax2.set_ylabel('Dim 2')
     ax2.set_zlabel('Dim 3')
@@ -153,4 +163,5 @@ def run_GPFA(data, type: DataType):
 
 if __name__ == "__main__":
     data = "data/om/07538_M1_Day1_CCA_data.mat"
-    run_GPFA(data, type=EPhys)
+    plot_key = "07538_M1_Day1_CCA"
+    run_GPFA(data, plot_key, type=DataType.EPhys)

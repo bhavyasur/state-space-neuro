@@ -41,6 +41,19 @@ def load_spikes(data):
 
     return spikes
 
+def load_spike_idx(data):
+    """
+    INPUT: data is a .mat file from the DualShank dataset in Box. this file contains keys 'fpath', 'IntanBehavior', 'M1Spikes', 'M2Spikes'
+    OUTPUT: spikes is a list, each item represents a neuron and is a numpy array of (num trials x timesteps)
+    """
+    mat = mat73.loadmat(data)
+    # print("mat type: " + str(type(mat))) # datatype debugging
+    # print("mat keys: " + str(mat.keys())) # check keys in mat file
+
+    spike_idx = mat['M1Spikes']['PSTH']['hit']['spkIdx']
+
+    return spike_idx
+
 def combine_days_zipped(data_zipped):
     """loads the spikes for all days that sessions were taken. essentially, concatenates sessions
     REQUIRES: text file inside the zipped folder that lists the file paths in the order that you want them concatenated.

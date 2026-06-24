@@ -10,7 +10,7 @@ from kneed import KneeLocator
 import sys
 from pathlib import Path
 
-ext = Path(__file__).resolve().parent.parent.parent
+ext = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.append(str(ext))
 
 from src.dual_shank.ds_load_util import psth_firing, load_spikes, select_trial

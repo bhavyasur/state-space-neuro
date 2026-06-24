@@ -65,18 +65,18 @@ def load_behavior(folder_path):
     print("mat keys: " + str(b.keys())) # check keys in mat file
 
     behavior_dict = {
-        "session_break_time": b['behavior']['session_break_time'],
-        "Fs": b['behavior']['Fs'],
-        "GO_timeidx": b['behavior']['GO_timeidx'],
-        "GOend_timeidx": b['behavior']['GOend_timeidx'],
-        "NOGO_timeidx": b['behavior']['NOGO_timeidx'],
-        "NOGOend_timeidx": b['behavior']['NOGOend_timeidx'],
-        "triallength": b['behavior']['triallength'],
-        "GOidx": b['behavior']['GOidx'],
-        "NOGOidx": b['behavior']['NOGOidx'],
-        "hit_idx": b['behavior']['hit_idx'],
-        "fa_idx": b['behavior']['fa_idx'],
-        "teach_idx": b['behavior']['teach_idx'],
+        "session_break_time": b['behavior']['session_break_time'], # length of session in ms?
+        "Fs": b['behavior']['Fs'], # sampling rate for intan
+        "GO_timeidx": b['behavior']['GO_timeidx'], # use to get trial times
+        "GOend_timeidx": b['behavior']['GOend_timeidx'], # use to get trial times
+        "NOGO_timeidx": b['behavior']['NOGO_timeidx'], # use to get trial times
+        "NOGOend_timeidx": b['behavior']['NOGOend_timeidx'], # use to get trial times
+        "triallength": b['behavior']['triallength'], # ??
+        "GOidx": b['behavior']['GOidx'], # ?? use to correspond trial data from time_idx to GO or NOGO
+        "NOGOidx": b['behavior']['NOGOidx'], # ?? use to correspond trial data from time_idx to GO or NOGO
+        "hit_idx": b['behavior']['hit_idx'], # identifies which trials were hits
+        "fa_idx": b['behavior']['fa_idx'], # identifies which trials were false alarms
+        "teach_idx": b['behavior']['teach_idx'], # identifies which trials were teach trials
         "missed_teach_idx": b['behavior']['missed_teach_idx'],
         "hit_rate": b['behavior']['hit_rate'],
         "fa_rate": b['behavior']['fa_rate'],
@@ -111,11 +111,6 @@ def load_calcium(folder_path):
         "trial_start_time": roi1["trial_start_time"],
         "trial_end_time": roi1["trial_end_time"],
         
-
-
-
-
-
     }
 
 

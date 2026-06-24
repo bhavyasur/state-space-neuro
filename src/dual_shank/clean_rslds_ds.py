@@ -90,7 +90,7 @@ def run_rslds_binned(binned, disc_states, latent_dims, plot: bool = False):
     return rslds_lem, xhat_lem, zhat_lem, q_elbos_lem, q_lem
 
 
-def run_rslds(data, disc_states, latent_dims, num_iters=50, plot: bool = False):
+def run_rslds(data, disc_states, latent_dims, num_obs, num_iters=50, plot: bool = False):
     # data = full.T
 
     y = bin_smooth(data).astype(int)
@@ -142,7 +142,7 @@ def run_rslds(data, disc_states, latent_dims, num_iters=50, plot: bool = False):
 
     return rslds_lem, xhat_lem, zhat_lem, q_elbos_lem, q_lem
 
-def run_rslds_pca_flowfield(data, disc_states, latent_dims, plot: bool = True,
+def run_rslds_pca_flowfield(data, disc_states, latent_dims, num_obs, plot: bool = True,
                              nxpts=20, nypts=20, alpha=0.8, num_iters=50, margin=1.0):
     """
     Run rSLDS on a full session of data, then PCA-project the resulting latent trajectory
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     spikes = load_spikes(day6)
     full = full_session(spikes)
     num_neurons = np.shape(full)[0]
-    num_obs = num_neurons
+    obs = num_neurons
     data = full.T
     # y = bin_smooth(data).astype(int)
 
@@ -383,5 +383,5 @@ if __name__ == "__main__":
     disc_states = 4 # should depend on held-out cross validation
     latent_dims = 8
     
-    run_rslds_pca_flowfield(data, disc_states, latent_dims, num_iters=50, plot=True)
+    run_rslds_pca_flowfield(data, disc_states, latent_dims, obs, num_iters=50, plot=True)
     # run_rslds(data, disc_states, latent_dims, num_iters=50, plot=True)
