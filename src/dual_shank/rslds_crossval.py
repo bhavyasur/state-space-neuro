@@ -59,7 +59,7 @@ def plot_cv_heatmap(results, param_grid):
     plt.show()
 
 
-def cross_val(raw_data, heldout_frac=0.1, n_repeats=3, var_threshold=0.8, **kwargs):
+def cross_val(full, heldout_frac=0.1, n_repeats=3, var_threshold=0.8, **kwargs):
     """ datas is raw .mat file
     """
     spks = load_spikes(raw_data)

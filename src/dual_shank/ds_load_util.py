@@ -36,8 +36,9 @@ def load_spikes(data):
     # print("mat keys: " + str(mat.keys())) # check keys in mat file
 
     spikes = mat['M1Spikes']['PSTH']['hit']['spks']
-    # print(np.shape(spikes)) # check shape of spikes array  
-    # print("dtype spikes[0]", type(spikes[0]))
+    print(np.shape(spikes)) # check shape of spikes array  
+    print("dtype spikes", type(spikes))
+    print("dtype spikes[0]", type(spikes[0]))
 
     return spikes
 
@@ -207,7 +208,7 @@ def select_trial(spikes, trial_idx):
 
 def full_session(spikes):
     """
-    INPUT: spikes is a list, each item represents trial and is a numpy array of (num neurons x timesteps)
+    INPUT: spikes is a list, each item represents neuron and is a numpy array of (num_trials x timesteps)
     OUTPUT: full_sess is a numpy array of (num neurons x num_trials*num_timesteps_per_trial). flattens the data so all trials are 
             represented in one row for each neuron.
     """
@@ -237,46 +238,48 @@ def visualize_trial(trial_spikelist, trial_rates, trial_idx):
     plt.show()
     return 
 
-def visualize_session(full_spikes, trial_rates):
-    plt.figure(figsize=(6, 4))
-    plt.imshow(full_spikes, aspect="auto", cmap="Greys")
-    plt.colorbar()
-    plt.title("Spike counts: Trials Concatenated")
+def visualize_session(full_spikes, ax):
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.imshow(full_spikes, aspect="auto", cmap="Greys")
+    ax.colorbar()
+    ax.set_title("Spike counts: Trials Concatenated")
 
-    plt.figure(figsize=(6, 4))
-    plt.imshow(trial_rates, aspect="auto", cmap="Greys")
-    plt.colorbar()
-    plt.title("Firing Rates: Trial-Averaged, All Neurons")
+    return ax
 
-    plt.show()
 
-    return 
+def visualize_firing_rates(full_spikes, trial_rates, ax):
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.imshow(trial_rates, aspect="auto", cmap="Greys")
+    ax.colorbar()
+    ax.set_title("Firing Rates: Trial-Averaged, All Neurons")
+
+    return ax
 
 # ---------- running things but ignore for now
 
 if __name__ == "__main__":
     spikes = load_spikes(data)
-    print("spikes shape", np.shape(spikes))
-    print("spikes[0] shape", np.shape(spikes[0]))
-    print(spikes[0].dtype)
+    # print("spikes shape", np.shape(spikes))
+    # print("spikes[0] shape", np.shape(spikes[0]))
+    # print(spikes[0].dtype)
 
-    idx = load_spike_idx(data)
-    print("spike idx", np.shape(idx))
-    print(idx.dtype)
+    # idx = load_spike_idx(data)
+    # print("spike idx", np.shape(idx))
+    # print(idx.dtype)
 
-    flat = full_session(spikes)
+    # flat = full_session(spikes)
 
-    print(flat.shape)
+    # print(flat.shape)
 
-    scipy.io.savemat('output/dual_shank/full_sess_07538_day1.mat', {'matrix': flat})
+    # scipy.io.savemat('output/dual_shank/full_sess_07538_day1.mat', {'matrix': flat})
 
-    trial0_spikelist = select_trial(spikes, 0)
-    print("trial0_spikelist shape:", np.shape(trial0_spikelist))
+    # trial0_spikelist = select_trial(spikes, 0)
+    # print("trial0_spikelist shape:", np.shape(trial0_spikelist))
 
-    rates =psth_firing(spikes, 3)
-    print("rates shape:", np.shape(rates))  
+    # rates =psth_firing(spikes, 3)
+    # print("rates shape:", np.shape(rates))  
 
-    visualize_session(flat, rates)
+    # visualize_session(flat, rates)
 
     # visualize_trial(trial0_spikelist, rates, 0)
 

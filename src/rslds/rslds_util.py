@@ -7,6 +7,7 @@ from scipy.ndimage import gaussian_filter1d
 import autograd.numpy as np
 import autograd.numpy.random as npr
 import math
+import ssm
 
 npr.seed(12345)
 
@@ -20,7 +21,6 @@ sns.set_style("white")
 sns.set_context("talk")
 
 plt.rcParams['axes.titlesize'] = 13
-
 
 # --------------- HELPER FUNCTIONS ---------------
 
@@ -305,3 +305,89 @@ def eigs_timeconstants(model, state_idx, dim_idx=None):
                 f"— this is half of an oscillatory pair, not a pure integration mode.")
 
         return eig_val, eig_vec, tc, dim_idx
+
+
+def softplus(x):
+    return np.log1p(np.exp(x))
+
+
+def plot_cv_heatmap(results, param_grid):
+    """
+    results: dict mapping (dim, state) -> mean_cv_score (fraction, not percent)
+    param_grid: dict with 'dims' and 'states' lists
+    """
+    dims = param_grid['dims']
+    states = param_grid['states']
+
+    # Build matrix: rows = states, cols = dims
+    grid = np.full((len(states), len(dims)), np.nan)
+    for (dim, state), score in results.items():
+        i = states.index(state)
+        j = dims.index(dim)
+        grid[i, j] = score * 100  # convert to percentage
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    finite_vals = grid[~np.isnan(grid)]
+    vmin = finite_vals.min() if finite_vals.size > 0 else 0
+    vmax = finite_vals.max() if finite_vals.size > 0 else 1
+    im = ax.imshow(grid, cmap="RdYlGn", aspect="auto", vmin=vmin, vmax=vmax)
+
+    ax.set_xticks(np.arange(len(dims)))
+    ax.set_xticklabels(dims)
+    ax.set_yticks(np.arange(len(states)))
+    ax.set_yticklabels(states)
+    ax.set_xlabel("Latent Dimensions")
+    ax.set_ylabel("Discrete States")
+    ax.set_title("Mean CV Variance Explained (%) by Hyperparameter Combination")
+
+    # Annotate each cell with its value
+    for i in range(len(states)):
+        for j in range(len(dims)):
+            val = grid[i, j]
+            if not np.isnan(val):
+                ax.text(j, i, f"{val:.1f}%", ha="center", va="center",
+                        color="black", fontsize=9)
+
+    fig.colorbar(im, ax=ax, label="Variance Explained (%)")
+    plt.tight_layout()
+    plt.show()
+
+def single_neuron_contribution(model, state_idx):
+    """finds single neuron weights for the integration dimension (max eigenvalue) of a specific discrete state of your rSLDS model"""
+
+    # determine which dimension you want to plot the single neuron contribution to. this function is set to plot single neuron contribution for largest eigenvalue dimension (integration dimension)
+    eigs, vecs, tcs, max_idx = eigs_timeconstants(model, state_idx=state_idx, dim_idx='max') # returns max eigenvalue, corresponding eigenvector, time constant, index of max eigenvalue
+    print("time constants", tcs)
+    print("max_idx", max_idx)
+
+    C = abs(np.squeeze(model.emissions.Cs))
+    print("shape of C", np.shape(C))
+    sorted_indices = np.argsort(-C[:, max_idx])  # Sort by contribution to the first dimension
+
+    fig = plt.figure(figsize=(10, 7))
+    fig.tight_layout()
+    gs = fig.add_gridspec(2, 1, height_ratios=[3, 8], hspace=0.4)
+
+    # Top: neuron weights for the first dimension
+    ax0 = fig.add_subplot(gs[0, 0])
+    abs_weights = np.abs(C[:, max_idx])
+    markers, stemlines, baseline = ax0.stem(np.arange(len(abs_weights)), abs_weights, basefmt=" ")
+    markers.set(markersize=5)
+    stemlines.set(linewidth=0.75)
+
+    ax0.set_ylabel("Weight (abs)", fontsize=11)
+    ax0.set_xticks(np.arange(0, np.shape(C)[0], 15))
+    
+    ax0.set_title("Single-cell contribution\nof Integration Dimension", fontsize=12)
+    ax0.spines['right'].set_visible(False)
+    ax0.spines['top'].set_visible(False)
+
+    # Bottom: heatmap of emission matrix, neurons sorted by first dimension
+    ax1 = fig.add_subplot(gs[1, 0])
+    ax1.imshow(C[sorted_indices, :], aspect='auto', cmap='viridis', interpolation='none')
+    ax1.set_ylabel("Neurons (sorted)", fontsize=11)
+    ax1.set_xlabel("Dimension", fontsize=11)
+    ax1.set_title('Emission matrix C', fontsize=13)
+    ax1.grid(False)
+
+    return fig
