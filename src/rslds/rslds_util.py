@@ -36,6 +36,21 @@ def plot_trajectory(z, x, ax=None, ls="-"):
                 color=colors[z[start] % len(colors)],
                 alpha=1.0)
     return ax
+    
+
+# need to add     
+def plot_trajectory_trialavg(z, x, ax=None, ls="-"):
+    zcps = np.concatenate(([0], np.where(np.diff(z))[0] + 1, [z.size]))
+    if ax is None:
+        fig = plt.figure(figsize=(4, 4))
+        ax = fig.gca()
+    for start, stop in zip(zcps[:-1], zcps[1:]):
+        ax.plot(x[start:stop + 1, 0],
+                x[start:stop + 1, 1],
+                lw=1, ls=ls,
+                color=colors[z[start] % len(colors)],
+                alpha=1.0)
+    return ax
 
 
 """This function was purely as a test, to run rSLDS with more than 2 latent dimensions and then only select 2 to plot
@@ -175,7 +190,6 @@ def bin_only(spike_data, bin_size_ms = 10):
     binned_spike_data = np.zeros((n_bins, n_neurons))
     for i in range(n_bins):
         binned_spike_data[i] = spike_data[i * bin_size:(i + 1) * bin_size].sum(axis=0)
-    print("Binned data shape:", binned_spike_data.shape)
 
     return binned_spike_data
 
@@ -200,7 +214,6 @@ def bin_smooth(spike_data, sigma = 5, bin_size_ms = 10):
     binned_spike_data = np.zeros((n_bins, n_neurons))
     for i in range(n_bins):
         binned_spike_data[i] = spike_data[i * bin_size:(i + 1) * bin_size].sum(axis=0)
-    print("Binned data shape:", binned_spike_data.shape)
 
     # Convert to Hz (spikes/second) by scaling
     scale_factor = bin_size_ms  # Convert to Hz
@@ -268,7 +281,7 @@ def plot_pca_flowfield(model, W, mu, plot_key,
 
     ax.set_xlabel('PC1')
     ax.set_ylabel('PC2')
-    ax.set_title(f'Inferred Flow Field in PC Space (Laplace-EM): {plot_key}')
+    ax.set_title(f'Inferred Flow Field in PC Space (Laplace-EM): \n{plot_key}')
 
     return ax
 
@@ -278,7 +291,6 @@ def eigs_timeconstants(model, state_idx, dim_idx=None):
     equation and returns time constants as numpy array
     """
     A = model.dynamics.As # A shape is (num_states, 10, 10)
-    print("A shape", np.shape(A))
     matrix = A[state_idx]
     tuple = np.linalg.eig(matrix)
     eigenvalues = tuple.eigenvalues
@@ -357,11 +369,8 @@ def single_neuron_contribution(model, state_idx):
 
     # determine which dimension you want to plot the single neuron contribution to. this function is set to plot single neuron contribution for largest eigenvalue dimension (integration dimension)
     eigs, vecs, tcs, max_idx = eigs_timeconstants(model, state_idx=state_idx, dim_idx='max') # returns max eigenvalue, corresponding eigenvector, time constant, index of max eigenvalue
-    print("time constants", tcs)
-    print("max_idx", max_idx)
-
+    
     C = abs(np.squeeze(model.emissions.Cs))
-    print("shape of C", np.shape(C))
     sorted_indices = np.argsort(-C[:, max_idx])  # Sort by contribution to the first dimension
 
     fig = plt.figure(figsize=(10, 7))
@@ -391,3 +400,85 @@ def single_neuron_contribution(model, state_idx):
     ax1.grid(False)
 
     return fig
+
+
+def run_rslds_concat(data, disc_states, latent_dims):
+    # data is one numpy array (num_timesteps, num_neurons)
+    a = [data]
+    y = np.asarray(a)
+    #y is (1, num_timesteps, num_neurons), dtype list of numpy arrays
+    
+    print("y shape", np.shape(y))
+    print("y[0] shape", np.shape(np.asarray(y[0])))
+    print("y[0] type", np.asarray(y[0]).dtype)
+
+    num_obs = np.shape(y)[2]
+    num_neurons = num_obs
+
+    rslds = ssm.SLDS(num_obs, disc_states, latent_dims,
+                    transitions="recurrent_only",
+                    emissions="poisson_orthog",
+                    emission_kwargs=dict(link="softplus"),
+                    M=0)
+    
+    T = np.shape(y)[1]
+    inputs = [np.zeros((num_obs,num_obs))]
+
+    rslds.initialize(y[0], inputs=None, verbose=1)
+    q_elbos_lem, q_lem = rslds.fit(y[0], method="laplace_em",
+                                variational_posterior="structured_meanfield",
+                                initialize=False, num_iters=50)
+    xhat_lem = q_lem.mean_continuous_states[0]
+    zhat_lem = rslds.most_likely_states(xhat_lem, y[0])
+    yhat_lem = rslds.smooth(xhat_lem, y[0])
+
+    rslds_lem = copy.deepcopy(rslds)
+
+    return rslds_lem, xhat_lem, zhat_lem, q_elbos_lem, q_lem
+
+def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break, trial_idx: int = None):
+
+    if trial_idx:
+        start, end = select_trial_from_trial_break(trial_break, trial_idx)
+        diff = np.diff(zhat_lem[start:end])
+        timesteps = len(zhat_lem[start:end])
+    else:
+        diff = np.diff(zhat_lem)
+        timesteps = len(zhat_lem)
+
+    # EX: np.array([0,0,0,0,1,1,1,2,2,1,0,0]) # len = 12
+    # rising_draft = [4, 7, 9, 10] # should be 0, 4, 7, 9, 10
+    # length_bar_draft = [3, 2, 1] # should be 4, 3, 2, 1, 2
+
+    rising_draft = np.where(diff != 0)[0] + 1 # the first index where the new term exists
+    len_r = len(rising_draft)
+    length_bar_draft = np.diff(rising_draft) 
+
+    rising = np.concatenate(([0], rising_draft))
+    length_bar = np.concatenate(([rising_draft[0]], length_bar_draft, [timesteps - rising_draft[len_r-1]]))
+
+    # to length_bar, prepend the first index of rising
+
+    for i in range(disc_states):
+        bar_list_per_state = []
+        for j in range(len(rising)):
+            # rising[j] is the time index where the state rises, length_bar[j] is how long it stays high
+            if zhat_lem[rising[j]] == i:
+                bar_list_per_state.append((rising[j], length_bar[j]))
+        ax.barh((((i*2)+1)*0.075), [length for _, length in bar_list_per_state], left=[start for start, _ in bar_list_per_state], height=0.15, color=colors[i % len(colors)], alpha=0.8)
+    
+    return ax
+
+def select_trial_from_trial_break(trial_break, trial_idx):
+    num_trials = len(trial_break)
+
+    before = trial_break[:trial_idx] # includes everything up until, excluding trial_idx
+    start_idx = np.sum(before)
+    end_idx = start_idx + trial_break[trial_idx]
+
+    return start_idx, end_idx
+
+# ----- plots for behavioral annotation -----
+
+def rslds_states_plot(model):
+    return

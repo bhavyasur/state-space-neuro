@@ -5,73 +5,74 @@ many of the rbp-cre load functions are copied for ETL. bessel is also similar, w
 """
 
 import scipy.io
-import os
 import numpy as np
 import sys
 from pathlib import Path
-import mat73
 import matplotlib.pyplot as plt
 import pandas as pd
 import quantities as pq
-import zipfile
+import glob
+import scipy.ndimage as spnd
 from typing import Literal
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from utils.utils import mat_to_dict
 
-def load_trialtype_idx_l23(data_path):
-    outer = Path(data_path)
-    calcium = outer / "Ca_imaging_data.mat"
-    c = scipy.io.loadmat(calcium, simplify_cells=True)
-    go = c['Ca_data']['ROI']['GO_trial']
-    nogo = c['Ca_data']['ROI']['NOGO_trial']
-
-    return go, nogo
-
-def load_dfoverf_l23(data_path, layer: Literal["L2", "L3", None] = None):
+def load_dfoverf_dendrite(data_path, session_date):
     """DATA_PATH IS NAME OF FOLDER that contains Ca_imaging_data.mat !!!!"""
     """returns a list of arrays. each item in list is a trial, each array is (num_neurons x num_timesteps)"""
-    """ note that layer is only for ETL data """
 
     outer = Path(data_path)
-    calcium = outer / "Ca_imaging_data.mat"
-    c = scipy.io.loadmat(calcium, simplify_cells=True)
+    inner = Path(outer / "Ca_data-same_cells") 
+    matching_files = glob.glob(f"{inner}/*-Ca_manual_curate_data.mat")
+
+    sessions = [file for file in matching_files if session_date in file]
+    my_session = sessions[0]
+
+    c = scipy.io.loadmat(my_session, simplify_cells=True)
+
     pre = c['Ca_data']['ROI']['DeltaFoverF']
+  
+    dfoverf = list(np.asarray(pre[i]) for i in range(len(pre)))
 
-    if layer == "L2" or layer == "L3":
-        ROI_centroid = c['Ca_data']['ROI']['ROIcentroid']
-
-        l2pre = []
-        l3pre = []
-        for i in range(len(pre)): # num trials
-            l2_pertrial = []
-            l3_pertrial = []
-            for j in range(np.shape(ROI_centroid)[0]): # num neurons
-                if ROI_centroid[j, 2] == 2:
-                    l2_pertrial.append(pre[i][j, :])
-                elif ROI_centroid[j, 2] == 3:
-                    l3_pertrial.append(pre[i][j, :])
-                else:
-                    raise ValueError("ROI_centroid should only have layers 2 and 3, something may be wrong with data or loading.")
-            l2pre.append(np.vstack(l2_pertrial))
-            l3pre.append(np.vstack(l3_pertrial))
-
-    # now l2pre and l3pre should be lists of arrays, each array is (num_neurons x num_timesteps) for that trial, but only for neurons in that layer.
-
-    if layer == "L2":
-        dfoverf = list(np.asarray(l2pre[i]) for i in range(len(l2pre)))
-    elif layer == "L3":
-        dfoverf = list(np.asarray(l3pre[i]) for i in range(len(l3pre)))
-    else:
-        dfoverf = list(np.asarray(pre[i]) for i in range(len(pre)))
-
-    # print("dfoverf num trials", len(dfoverf))
-    # print("dfoverf shape of first trial (num_neurons x num_frames)", np.shape(dfoverf[0]))
-   
     return dfoverf
 
-def full_session_l23(dfoverf):
+def load_trialbreak_dendrite(data_path, session_date):
+    outer = Path(data_path)
+    inner = Path(outer / "Ca_data-same_cells") 
+    matching_files = glob.glob(f"{inner}/*-Ca_manual_curate_data.mat")
+
+    sessions = [file for file in matching_files if session_date in file]
+    my_session = sessions[0]
+
+    c = scipy.io.loadmat(my_session, simplify_cells=True)
+
+    pre = c['Ca_data']['ROI']['trial_break']
+
+    return np.asarray(pre)
+
+
+
+def load_dfoverf_problemtest(data_path, path_type: Literal["binarized", "reconstructed", None] = None):
+    """returns a list of arrays. each item in list is a trial, each array is (num_neurons x num_timesteps)"""
+
+    c = scipy.io.loadmat(data_path, simplify_cells=True)
+
+    if path_type == "binarized":
+        pre = c['Ca_data']['ROI']['DeltaFoverF']
+
+    elif path_type == "reconstructed":
+        pre = c['Ca_data']['ROI']['DeltaFoverF_r']
+    else:
+        raise ValueError("path_type must be either 'binarized' or 'reconstructed' for this test.")
+
+    dfoverf = list(np.asarray(pre[i]) for i in range(len(pre)))
+
+    return dfoverf
+
+
+def full_session_dendrite(dfoverf):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
     OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
@@ -94,7 +95,8 @@ def full_session_l23(dfoverf):
         
     return full_sess
 
-def full_session_trialsliced_l23(dfoverf):
+
+def full_session_trialsliced_dendrite(dfoverf):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
     OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
@@ -143,24 +145,15 @@ def full_session_trialsliced_l23(dfoverf):
 
     return full_sess
 
-def gonogotrials_sliced_l23(dfoverf, gonogo):
+def full_session_trialsliced_thresholded_dendrite(dfoverf):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
-            gonogo is a 1d array of indices that represent which trials are go trials or nogo trials.
     OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
             represented in one row for each neuron.
     """
+    num_trials = len(dfoverf)
     num_neurons = np.shape(dfoverf[0])[0]
-
-    # use go trial indices to only select go trials
-    gonogo_trials = []
-    for i in range(len(gonogo)):
-        idx = gonogo[i]
-        trial = dfoverf[idx-1]
-        gonogo_trials.append(trial)
-
-    num_trials = len(gonogo)
-
+    
     # 1st cut up each trial and turn into a list
 
     all_neurons = []
@@ -168,7 +161,7 @@ def gonogotrials_sliced_l23(dfoverf, gonogo):
         sliced_list = []
         time_now = 0
         for j in range(num_trials):
-            trial_row_single_neuron = gonogo_trials[j][i, :]
+            trial_row_single_neuron = dfoverf[j][i, :]
             # print("trial row shape", np.shape(trial_row_single_neuron))
             length = np.shape(trial_row_single_neuron)[0]
             fiveper = int(0.05 * length)
@@ -194,16 +187,67 @@ def gonogotrials_sliced_l23(dfoverf, gonogo):
         # now for each neuron you have single_neuron_concat which is the row array of all trials for that neuron
 
     #all_neurons at this point should be a list of 1D arrays, of shape (num_neurons, length of all trials)
-    gonogo_length = np.shape(all_neurons)[1]
-    gonogo_sess = np.zeros((num_neurons, gonogo_length))
+    full_length = np.shape(all_neurons)[1]
+    full_sess = np.zeros((num_neurons, full_length))
     for i in range(num_neurons):
-        gonogo_sess[i, :] = all_neurons[i]
+        full_sess[i, :] = all_neurons[i]
 
-    return gonogo_sess
+    # thresholding
+    threshold = 0.5
+    for row in range(np.shape(full_sess)[0]):
+        if full_sess[row, :].max(axis=-1) < threshold:
+            full_sess[row, :] = 0
+        else:
+            full_sess[row, :] = full_sess[row, :]
+
+    full_sess_thresholded = full_sess[full_sess.any(axis=1)]
+            
+    return full_sess_thresholded
+
+
+""""NOTE: WITH CONCATENATION, YOU CAN ONLY CONCATENATE ON NON THRESHOLDED SETS.
+    to concatenate thresholded sets, must incorporate thresholding AFTER concatenating sessions. need to add to pipeline.
+"""
 
 
 
-def trace_sanity_check_l23(full_sess, random_seed=None):
+def concatenate_sessions(list_fulls):
+    """INPUT: takes in a list of full sessions (each is (num_neurons, num_timesteps)) and concatenates them based on condition type. Returns a concatenated full session that represents multiple sessions concatenated, 2D array."""
+
+    # NOTE: this is used BEFORE pipeline and output is used as input to the pipeline if type=='session_concat' in pipeline instantiation.
+
+    num_sessions = len(list_fulls)
+    num_neurons = np.shape(list_fulls[0])[0]
+    
+    sum_timebins = sum(np.shape(list_fulls[i])[1] for i in range(num_sessions))
+
+    full_sess = np.zeros((num_neurons, sum_timebins))
+
+    for i in range(num_neurons):
+        time_now = 0
+        for j in range(num_sessions):
+            x = list_fulls[j][i, :]
+            num_timebins_this_session = np.shape(list_fulls[j])[1]
+            full_sess[i, time_now : num_timebins_this_session+time_now] = x
+            time_now += num_timebins_this_session
+        
+    return full_sess
+
+def session_concat_pipeline(folder_path, condition_dates):
+    """pipeline to concatenate sessions from raw data. takes in list of date strings, returns concatenated session.
+    condition_dates will be the input to 'dates' in run_rslds_pca_flowfield"""
+
+    list_condition = []
+    for date in condition_dates:
+        dfoverf = load_dfoverf_dendrite(folder_path, date)
+        single_session = full_session_trialsliced_dendrite(dfoverf)
+        list_condition.append(single_session)  
+    concat_condition = concatenate_sessions(list_condition)
+    
+    return concat_condition # this is the equivalent of full
+    
+
+def trace_sanity_check_dendrite(full_sess, random_seed=None):
     """this function visualizes a trace of all the neurons for a random set of 100 time steps so you can sanity check that the neurons activity is correct."""
     num_neurons = np.shape(full_sess)[0]
     
@@ -231,88 +275,65 @@ def trace_sanity_check_l23(full_sess, random_seed=None):
     axes[-1].set_xlabel("Time Index", fontsize = 10)
 
     return fig, axes
-
-def load_trialbreak_l23(raw_data):
-    outer = Path(raw_data)
-    calcium = outer / "Ca_imaging_data.mat"
-    c = scipy.io.loadmat(calcium, simplify_cells=True)
-    trial_break = c['Ca_data']['ROI']['trial_break']
-
-    return np.asarray(trial_break)
-
-# take the non-trial-sliced version for this
-def behavioral_ann_L23(raw_data, type, plot=False):
-    """ FOR L23: 
-        Exact time of piston 1.67 seconds until 2.8 seconds after piston start: So your online frames will be frame number (1.67 until 2.78)*frame rate
-        Offline is anything beyond 8 seconds after beginning of trial.
-    """
-    dfoverf = load_dfoverf_l23(raw_data)
-    full = full_session_l23(dfoverf)
-    trial_idx = load_trialbreak_l23(raw_data).astype(int) # should be 1d array
-
-    if type == "bessel":
-        frame_rate = 30.08 # frames per second
-    elif type == "etl":
-        frame_rate = 15.01 # frames per second
-    else:
-        raise ValueError("type must be 'bessel' or 'etl'")
-    
-    online_start = 1.67 * frame_rate
-    online_end = 2.78 * frame_rate
-    offline_start = 8 * frame_rate
-
-    online_start_list = []
-    online_end_list = []
-    offline_start_list = []
-    offline_end_list = [] # this is just end of each trial
-
-    time_now = 0
-    for i in range(len(trial_idx)):
-        l = trial_idx[i] # l stands for trial length
-
-        on_s = online_start + time_now
-        on_e = online_end + time_now
-        off_s = offline_start + time_now
-        off_e = time_now + l
-        online_start_list.append(on_s)
-        online_end_list.append(on_e)
-        offline_start_list.append(off_s)
-        offline_end_list.append(off_e)
-
-        time_now += l
-
-    online_durations = np.subtract(online_end_list, online_start_list)
-    offline_durations = np.subtract(offline_end_list, offline_start_list)
-    
-    # make gantt chart of online offline for full session
-    fig, ax = plt.subplots(figsize=(12, 2))
-    ax.barh(0.3, online_durations, left=online_start_list, height=0.2,color='green', label="online", alpha=0.5)
-    ax.barh(0.1, offline_durations, left=offline_start_list, height=0.2, color='red', label="offline", alpha=0.5)
-    ax.set_xlabel("Time (frames)")
-    ax.set_title("Online and Offline Periods for Full Session")
-    ax.legend()
-
-    if plot==True:
-        plt.tight_layout()
-        plt.show()
-
-    return ax
-    
-
     
 # ---------- running things but ignore for now
 
 if __name__ == "__main__":
-    folder_path = "data/shivam/ETL_140_250/075402/Naive/GO"
+    folder_path = "data/shulan/#23819M_GCaMP8m_rg_PoM-FOV2"
+    
+    # date sets per condition:
+    naive = ["050425_23819"]
+    naive_plot_key = '#23819M_GCaMP8m_rg_PoM-FOV2/naive_concat'
 
-    print("layer 2\n")
-    load_dfoverf_l23(folder_path, layer="L2")
+    disc_states = 4 
+    latent_dims = 8
 
-    print("layer 3\n")
-    load_dfoverf_l23(folder_path, layer="L3")
+    # naive concat
+    list_naive = []
+    for date in naive:
+        dfoverf = load_dfoverf_dendrite(folder_path, date)
+        single_session = full_session_trialsliced_dendrite(dfoverf)
+        list_naive.append(single_session)  
+    concat_naive = concatenate_sessions(list_naive)
+   
+    mdic = {"concat_naive": concat_naive, "label": "full_data"}
+    scipy.io.savemat("output/naive_concat_23819.mat", mdic)
 
-    print("no layer\n")
-    load_dfoverf_l23(folder_path)
 
-    # behavioral_ann_L23(folder_path, type="bessel", plot=True)
-  
+    dfoverf_tester = load_dfoverf_dendrite(folder_path, "050425_23819")
+    test = full_session_trialsliced_dendrite(dfoverf_tester)
+
+    mdic2 = {"full_trialsliced_0504_23819": test, "label": "test single session"}
+    scipy.io.savemat("output/full_trialsliced_0504_23819.mat", mdic2)
+
+
+def spikes_smooth(data_path, session_date):
+
+    outer = Path(data_path)
+    inner = Path(outer / "Ca_data-same_cells") 
+    matching_files = glob.glob(f"{inner}/*-Ca_manual_curate_data.mat")
+
+    sessions = [file for file in matching_files if session_date in file]
+    my_session = sessions[0]
+
+    c = scipy.io.loadmat(my_session, simplify_cells=True)
+
+    pre = c['Ca_data']['ROI']['Spikes']
+
+    spikes = list(np.asarray(pre[i]) for i in range(len(pre)))
+
+    full = full_session_dendrite(spikes)
+
+    neural_data = full.T
+
+    neural_data = spnd.gaussian_filter1d(neural_data, sigma=2, axis=-1) # (num_timesteps, num_neurons)
+
+    return neural_data
+
+
+if __name__ == "__main__":
+    path = "data/shulan/#23819M_GCaMP8m_rg_PoM-FOV2"
+    date = "050425"
+
+    trial_break = load_trialbreak_dendrite(path, date)
+    print(np.shape(trial_break))

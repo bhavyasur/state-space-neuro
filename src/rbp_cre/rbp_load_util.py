@@ -17,7 +17,9 @@ import mat73
 import matplotlib.pyplot as plt
 import pandas as pd
 import quantities as pq
+import glob
 import zipfile
+from typing import Literal
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -90,40 +92,40 @@ def load_calcium(folder_path):
 
 
 
-def load_dfoverf(folder_path, roi: int):
+def load_dfoverf_rbp(folder_path, path_type: Literal["suite2p", "manual", None] = None, roi: int = None):
     """returns a list of arrays. each item in list is a trial, each array is (num_neurons x num_timesteps)"""
 
     outer = Path(folder_path)
     inner = Path(outer / "behavior_output") 
-    calcium = inner / "Ca_imaging_data.mat"
 
-    c = scipy.io.loadmat(calcium, simplify_cells=True)
+    if path_type == "suite2p":
+        calcium = inner / "Ca_suite2p_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        pre = c['Ca_data']['ROI']['DeltaFoverF']
 
-    pre = c['Ca_data']['ROI'][int(roi-1)]['DeltaFoverF']
-    print(len(pre))
-    print(np.shape(pre[0]))
-    print(pre[0].dtype)
+    elif path_type == "manual":
+        c = scipy.io.loadmat(folder_path, simplify_cells=True) # it's not a folder, it's a file, but variable name is folder_path
+        pre = c['Ca_data']['ROI']['DeltaFoverF']
+
+    else:
+        calcium = inner / "Ca_imaging_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        pre = c['Ca_data']['ROI'][int(roi-1)]['DeltaFoverF']
+
     dfoverf = list(np.asarray(pre[i]) for i in range(len(pre)))
-    print("len of dfoverf", len(dfoverf))
-    print("shape of dfoverf[0]", np.shape(dfoverf[0]))
-    print("type dfoverf", type(dfoverf))
-    print("type dfoverf[0]", type(dfoverf[0]))
 
     return dfoverf
-
-
 
 def full_session_rbp(dfoverf):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
-    OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
+    OUTPUT: full_sess is a numpy array of (num neurons, n`um_trials * num_timebins). flattens the data so all trials are 
             represented in one row for each neuron.
     """
     num_trials = len(dfoverf)
     num_neurons = np.shape(dfoverf[0])[0]
     
     sum_timebins = sum(np.shape(dfoverf[i])[1] for i in range(num_trials))
-    print(sum_timebins) # full length of the trial-concatenation of timesteps
 
     full_sess = np.zeros((num_neurons, sum_timebins))
 
@@ -136,6 +138,161 @@ def full_session_rbp(dfoverf):
             time_now += num_timebins_this_trial
         
     return full_sess
+
+def full_session_trialsliced_rbp(dfoverf):
+    """
+    INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
+    OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
+            represented in one row for each neuron.
+    """
+    num_trials = len(dfoverf)
+    num_neurons = np.shape(dfoverf[0])[0]
+    
+    # 1st cut up each trial and turn into a list
+
+    all_neurons = []
+    for i in range(num_neurons):
+        sliced_list = []
+        time_now = 0
+        for j in range(num_trials):
+            trial_row_single_neuron = dfoverf[j][i, :]
+            # print("trial row shape", np.shape(trial_row_single_neuron))
+            length = np.shape(trial_row_single_neuron)[0]
+            fiveper = int(0.05 * length)
+            # print("fiveper", fiveper)
+            sliced_trial = trial_row_single_neuron[fiveper:(length-fiveper),]
+            # print("sliced trial shape", np.shape(sliced_trial))
+            sliced_list.append(sliced_trial)
+            slice_length = np.shape(sliced_trial)[0]
+            time_now += slice_length
+
+        single_neuron_concat = np.zeros(time_now)
+        # at this point you have an empty array for each neuron that is the length of all the concatenated trials combined.
+        # you also have the sliced_list which is each trial.
+
+        time_iterator = 0
+        for j in range(num_trials):
+            trial = sliced_list[j]
+            slice_trial_length = np.shape(trial)[0]
+            single_neuron_concat[time_iterator:(time_iterator+slice_trial_length),] = trial
+            time_iterator += slice_trial_length
+        
+        all_neurons.append(single_neuron_concat)
+        # now for each neuron you have single_neuron_concat which is the row array of all trials for that neuron
+
+    #all_neurons at this point should be a list of 1D arrays, of shape (num_neurons, length of all trials)
+    full_length = np.shape(all_neurons)[1]
+    full_sess = np.zeros((num_neurons, full_length))
+    for i in range(num_neurons):
+        full_sess[i, :] = all_neurons[i]
+
+    return full_sess
+
+def load_trialtype_idx_rbp(data_path, path_type: Literal["suite2p", "manual", None] = None, roi: int = None):
+
+    outer = Path(data_path)
+    inner = Path(outer / "behavior_output") 
+
+    if path_type == "suite2p":
+        calcium = inner / "Ca_suite2p_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        go = c['Ca_data']['ROI']['GO_trial']
+        nogo = c['Ca_data']['ROI']['NOGO_trial']
+
+    elif path_type == "manual":
+        c = scipy.io.loadmat(folder_path, simplify_cells=True) # it's not a folder, it's a file, but variable name is folder_path
+        go = c['Ca_data']['ROI'][int(roi-1)]['GO_trial']
+        nogo = c['Ca_data']['ROI'][int(roi-1)]['NOGO_trial']
+    else:
+        calcium = inner / "Ca_imaging_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        go = c['Ca_data']['ROI']['GO_trial']
+        nogo = c['Ca_data']['ROI']['NOGO_trial']
+
+    return go, nogo
+
+
+
+def load_trialbreak_rbp(data_path, path_type: Literal["suite2p", "manual", None] = None, roi: int = None):
+
+    outer = Path(data_path)
+    inner = Path(outer / "behavior_output") 
+
+    if path_type == "suite2p":
+        calcium = inner / "Ca_suite2p_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        pre = c['Ca_data']['ROI']['trial_break']
+
+    elif path_type == "manual":
+        c = scipy.io.loadmat(folder_path, simplify_cells=True) # it's not a folder, it's a file, but variable name is folder_path
+        pre = c['Ca_data']['ROI']['trial_break']
+
+    else:
+        calcium = inner / "Ca_imaging_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        pre = c['Ca_data']['ROI'][int(roi-1)]['trial_break']
+
+    return np.asarray(pre)
+
+
+def gonogotrials_sliced_rbp(dfoverf, gonogo):
+    """
+    INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
+            gonogo is a 1d array of indices that represent which trials are go trials or nogo trials.
+    OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
+            represented in one row for each neuron.
+    """
+    num_neurons = np.shape(dfoverf[0])[0]
+
+    # use go trial indices to only select go trials
+    gonogo_trials = []
+    for i in range(len(gonogo)):
+        idx = gonogo[i]
+        trial = dfoverf[idx-1]
+        gonogo_trials.append(trial)
+
+    num_trials = len(gonogo)
+
+    # 1st cut up each trial and turn into a list
+
+    all_neurons = []
+    for i in range(num_neurons):
+        sliced_list = []
+        time_now = 0
+        for j in range(num_trials):
+            trial_row_single_neuron = gonogo_trials[j][i, :]
+            # print("trial row shape", np.shape(trial_row_single_neuron))
+            length = np.shape(trial_row_single_neuron)[0]
+            fiveper = int(0.05 * length)
+            # print("fiveper", fiveper)
+            sliced_trial = trial_row_single_neuron[fiveper:(length-fiveper),]
+            # print("sliced trial shape", np.shape(sliced_trial))
+            sliced_list.append(sliced_trial)
+            slice_length = np.shape(sliced_trial)[0]
+            time_now += slice_length
+
+        single_neuron_concat = np.zeros(time_now)
+        # at this point you have an empty array for each neuron that is the length of all the concatenated trials combined.
+        # you also have the sliced_list which is each trial.
+
+        time_iterator = 0
+        for j in range(num_trials):
+            trial = sliced_list[j]
+            slice_trial_length = np.shape(trial)[0]
+            single_neuron_concat[time_iterator:(time_iterator+slice_trial_length),] = trial
+            time_iterator += slice_trial_length
+        
+        all_neurons.append(single_neuron_concat)
+        # now for each neuron you have single_neuron_concat which is the row array of all trials for that neuron
+
+    #all_neurons at this point should be a list of 1D arrays, of shape (num_neurons, length of all trials)
+    gonogo_length = np.shape(all_neurons)[1]
+    gonogo_sess = np.zeros((num_neurons, gonogo_length))
+    for i in range(num_neurons):
+        gonogo_sess[i, :] = all_neurons[i]
+
+    return gonogo_sess
+
 
 
 def visualize_trace(full_sess):
@@ -180,13 +337,14 @@ def trace_sanity_check(full_sess, random_seed=None):
     axes[-1].set_xlabel("Time Index", fontsize = 10)
 
     return fig, axes
+
     
 
 # ---------- running things but ignore for now
 
 if __name__ == "__main__":
     folder_path = "data/shulan/091024_61601"
-    dfoverf = load_dfoverf(folder_path, 1)
+    dfoverf = load_dfoverf_rbp(folder_path, 1)
     full = full_session_rbp(dfoverf)
 
     mdic = {"full": full, "label": "experiment"}

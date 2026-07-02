@@ -36,9 +36,6 @@ def load_spikes(data):
     # print("mat keys: " + str(mat.keys())) # check keys in mat file
 
     spikes = mat['M1Spikes']['PSTH']['hit']['spks']
-    print(np.shape(spikes)) # check shape of spikes array  
-    print("dtype spikes", type(spikes))
-    print("dtype spikes[0]", type(spikes[0]))
 
     return spikes
 
@@ -136,8 +133,6 @@ def combine_days(data):
     for idx in range(len(data_indices)):
         name = data_indices[idx]
         reordered.append(dir[name])
-
-    print(reordered)
 
     dicted_neurons = {}
 
