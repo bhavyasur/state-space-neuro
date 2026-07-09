@@ -3,11 +3,15 @@ import os
 import pickle
 import copy
 from scipy.ndimage import gaussian_filter1d
+from pathlib import Path
 
 import autograd.numpy as np
 import autograd.numpy.random as npr
+from scipy import stats
 import math
+from sklearn.model_selection import KFold
 import ssm
+from typing import Literal
 
 npr.seed(12345)
 
@@ -286,12 +290,18 @@ def plot_pca_flowfield(model, W, mu, plot_key,
     return ax
 
 
-def eigs_timeconstants(model, state_idx, dim_idx=None):
+def eigs_timeconstants(model, state_idx, model_type=Literal["true", "csv"], dim_idx=None):
     """ Takes in dynamics matrix from model and returns eigenvalues in numpy array. Then calculates time constants per Nair
     equation and returns time constants as numpy array
     """
-    A = model.dynamics.As # A shape is (num_states, 10, 10)
-    matrix = A[state_idx]
+    if model_type == "true":
+        A = model.dynamics.As # A shape is (num_states, 10, 10)
+        matrix = A[state_idx]
+    elif model_type == "csv":
+        matrix = model
+    else:
+        raise ValueError("Parameter model_type must be set to either 'true' or 'csv'.")
+    
     tuple = np.linalg.eig(matrix)
     eigenvalues = tuple.eigenvalues
     eigenvectors = tuple.eigenvectors
@@ -323,7 +333,7 @@ def softplus(x):
     return np.log1p(np.exp(x))
 
 
-def plot_cv_heatmap(results, param_grid):
+def plot_cv_heatmap(results, param_grid, ax):
     """
     results: dict mapping (dim, state) -> mean_cv_score (fraction, not percent)
     param_grid: dict with 'dims' and 'states' lists
@@ -338,11 +348,10 @@ def plot_cv_heatmap(results, param_grid):
         j = dims.index(dim)
         grid[i, j] = score * 100  # convert to percentage
 
-    fig, ax = plt.subplots(figsize=(10, 6))
     finite_vals = grid[~np.isnan(grid)]
     vmin = finite_vals.min() if finite_vals.size > 0 else 0
     vmax = finite_vals.max() if finite_vals.size > 0 else 1
-    im = ax.imshow(grid, cmap="RdYlGn", aspect="auto", vmin=vmin, vmax=vmax)
+    ax.imshow(grid, cmap="RdYlGn", aspect="auto", vmin=vmin, vmax=vmax)
 
     ax.set_xticks(np.arange(len(dims)))
     ax.set_xticklabels(dims)
@@ -360,17 +369,21 @@ def plot_cv_heatmap(results, param_grid):
                 ax.text(j, i, f"{val:.1f}%", ha="center", va="center",
                         color="black", fontsize=9)
 
-    fig.colorbar(im, ax=ax, label="Variance Explained (%)")
-    plt.tight_layout()
-    plt.show()
+    return ax
 
-def single_neuron_contribution(model, state_idx):
+def single_neuron_contribution(state_idx, model=None, As=None, Cs=None, model_type: Literal["true", "csv", None] = None):
     """finds single neuron weights for the integration dimension (max eigenvalue) of a specific discrete state of your rSLDS model"""
 
     # determine which dimension you want to plot the single neuron contribution to. this function is set to plot single neuron contribution for largest eigenvalue dimension (integration dimension)
-    eigs, vecs, tcs, max_idx = eigs_timeconstants(model, state_idx=state_idx, dim_idx='max') # returns max eigenvalue, corresponding eigenvector, time constant, index of max eigenvalue
     
-    C = abs(np.squeeze(model.emissions.Cs))
+    if model_type == "true":
+        eigs, vecs, tcs, max_idx = eigs_timeconstants(model, state_idx=state_idx, model_type=model_type, dim_idx='max') # returns max eigenvalue, corresponding eigenvector, time constant, index of max eigenvalue
+        C = abs(np.squeeze(model.emissions.Cs))
+    elif model_type == "csv":
+        eigs, vecs, tcs, max_idx = eigs_timeconstants(As, state_idx=state_idx, model_type=model_type, dim_idx='max') # returns max eigenvalue, corresponding eigenvector, time constant, index of max eigenvalue
+        C = Cs
+    else:
+        raise ValueError("model_type should be 'true' or 'csv'")
     sorted_indices = np.argsort(-C[:, max_idx])  # Sort by contribution to the first dimension
 
     fig = plt.figure(figsize=(10, 7))
@@ -387,7 +400,7 @@ def single_neuron_contribution(model, state_idx):
     ax0.set_ylabel("Weight (abs)", fontsize=11)
     ax0.set_xticks(np.arange(0, np.shape(C)[0], 15))
     
-    ax0.set_title("Single-cell contribution\nof Integration Dimension", fontsize=12)
+    ax0.set_title(f"Single-cell contribution\nof Integration Dimension, State {state_idx}", fontsize=12)
     ax0.spines['right'].set_visible(False)
     ax0.spines['top'].set_visible(False)
 
@@ -396,55 +409,25 @@ def single_neuron_contribution(model, state_idx):
     ax1.imshow(C[sorted_indices, :], aspect='auto', cmap='viridis', interpolation='none')
     ax1.set_ylabel("Neurons (sorted)", fontsize=11)
     ax1.set_xlabel("Dimension", fontsize=11)
-    ax1.set_title('Emission matrix C', fontsize=13)
+    ax1.set_title(f'Emission matrix C, State {state_idx}', fontsize=13)
     ax1.grid(False)
 
     return fig
 
+def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break, trial_structure: Literal["single_trial", None] = None, trial_idx: int = None):
 
-def run_rslds_concat(data, disc_states, latent_dims):
-    # data is one numpy array (num_timesteps, num_neurons)
-    a = [data]
-    y = np.asarray(a)
-    #y is (1, num_timesteps, num_neurons), dtype list of numpy arrays
-    
-    print("y shape", np.shape(y))
-    print("y[0] shape", np.shape(np.asarray(y[0])))
-    print("y[0] type", np.asarray(y[0]).dtype)
-
-    num_obs = np.shape(y)[2]
-    num_neurons = num_obs
-
-    rslds = ssm.SLDS(num_obs, disc_states, latent_dims,
-                    transitions="recurrent_only",
-                    emissions="poisson_orthog",
-                    emission_kwargs=dict(link="softplus"),
-                    M=0)
-    
-    T = np.shape(y)[1]
-    inputs = [np.zeros((num_obs,num_obs))]
-
-    rslds.initialize(y[0], inputs=None, verbose=1)
-    q_elbos_lem, q_lem = rslds.fit(y[0], method="laplace_em",
-                                variational_posterior="structured_meanfield",
-                                initialize=False, num_iters=50)
-    xhat_lem = q_lem.mean_continuous_states[0]
-    zhat_lem = rslds.most_likely_states(xhat_lem, y[0])
-    yhat_lem = rslds.smooth(xhat_lem, y[0])
-
-    rslds_lem = copy.deepcopy(rslds)
-
-    return rslds_lem, xhat_lem, zhat_lem, q_elbos_lem, q_lem
-
-def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break, trial_idx: int = None):
-
-    if trial_idx:
+    if trial_structure == "single_trial":
         start, end = select_trial_from_trial_break(trial_break, trial_idx)
+        start = int(start)
+        end = int(end)
+        trial_len = end - start
         diff = np.diff(zhat_lem[start:end])
         timesteps = len(zhat_lem[start:end])
-    else:
+    else: # this is for trial-averaged case where the zhat_lem parameter is input as the trial-average, with length of a single trial.
         diff = np.diff(zhat_lem)
         timesteps = len(zhat_lem)
+        trial_len = len(zhat_lem)
+    
 
     # EX: np.array([0,0,0,0,1,1,1,2,2,1,0,0]) # len = 12
     # rising_draft = [4, 7, 9, 10] # should be 0, 4, 7, 9, 10
@@ -454,19 +437,33 @@ def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break, trial_idx: in
     len_r = len(rising_draft)
     length_bar_draft = np.diff(rising_draft) 
 
-    rising = np.concatenate(([0], rising_draft))
-    length_bar = np.concatenate(([rising_draft[0]], length_bar_draft, [timesteps - rising_draft[len_r-1]]))
+    if rising_draft.size == 0:
+        print("zhat_lem does not contain any state changes. this may be correct, but could indicate an error in your data. Please check!")
+        duration = len(zhat_lem)
+        value = zhat_lem[0]
+        ax.barh(0.075, [duration], left=[0], height=0.15, color=colors[0 % len(colors)], alpha=0.8)
+        ax.set_yticks([0.075], [f"state {zhat_lem[0]}"])
+    else:
+        rising = np.concatenate(([0], rising_draft))
+        length_bar = np.concatenate(([rising_draft[0]], length_bar_draft, [timesteps - rising_draft[len_r-1]]))
 
-    # to length_bar, prepend the first index of rising
+        # to length_bar, prepend the first index of rising
+        tick_list = []
+        states = [f"state {i}" for i in range(disc_states)]
 
-    for i in range(disc_states):
-        bar_list_per_state = []
-        for j in range(len(rising)):
-            # rising[j] is the time index where the state rises, length_bar[j] is how long it stays high
-            if zhat_lem[rising[j]] == i:
-                bar_list_per_state.append((rising[j], length_bar[j]))
-        ax.barh((((i*2)+1)*0.075), [length for _, length in bar_list_per_state], left=[start for start, _ in bar_list_per_state], height=0.15, color=colors[i % len(colors)], alpha=0.8)
-    
+        for i in range(disc_states):
+            bar_list_per_state = []
+            for j in range(len(rising)):
+                # rising[j] is the time index where the state rises, length_bar[j] is how long it stays high
+                if zhat_lem[rising[j]] == i:
+                    bar_list_per_state.append((rising[j], length_bar[j]))
+            tick = ((i*2)+1)*0.075
+            tick_list.append(tick)
+            ax.barh(tick, [length for _, length in bar_list_per_state], left=[start for start, _ in bar_list_per_state], height=0.15, color=colors[i % len(colors)], alpha=0.8)
+        
+        ax.set_yticks(tick_list, states)
+        ax.set_xlim(0, trial_len - 1)
+
     return ax
 
 def select_trial_from_trial_break(trial_break, trial_idx):
@@ -480,5 +477,129 @@ def select_trial_from_trial_break(trial_break, trial_idx):
 
 # ----- plots for behavioral annotation -----
 
-def rslds_states_plot(model):
-    return
+
+def trial_average_zhat(trial_break, zhat_lem, trial_selection: Literal["go", "nogo", None] = None, gonogo=None):
+    min = int(np.min(trial_break)) # should return the minimum trial length
+
+    if trial_selection == "go" or trial_selection == "nogo":
+
+        zhat_trial_list = []
+
+        gonogo_trial_break = []
+        for i in range(len(gonogo)):
+            idx = gonogo[i]
+            length = trial_break[idx-1]
+            gonogo_trial_break.append(length)
+
+        time_now = int(0)
+        for i in range(len(gonogo_trial_break)):
+            len_trial = int(gonogo_trial_break[i])
+            trial_zhat = zhat_lem[time_now:(time_now + len_trial)]
+            zhat_trial_list.append(trial_zhat)
+            time_now += len_trial
+
+        if len(zhat_trial_list) != len(gonogo_trial_break):
+            raise ValueError("trial list does not contain the correct number of trials")
+
+        truncated_list = []
+        for trial in zhat_trial_list:
+            retain = trial[0:min]
+            truncated_list.append(retain)
+
+        if len(truncated_list) != len(gonogo_trial_break):
+            raise ValueError("truncated trial list does not contain the correct number of trials")
+        
+        stack = np.stack(truncated_list, axis=0)
+        result = stats.mode(stack, axis=0)
+        squeeze = result.mode.squeeze()
+        print("Successfully found mean zhat for full trial set.\n")
+        return squeeze # should be a numpy array of the averaged trial
+    
+    else:
+        zhat_trial_list = []
+
+        time_now = int(0)
+        for i in range(len(trial_break)):
+            len_trial = int(trial_break[i])
+            trial_zhat = zhat_lem[time_now:(time_now + len_trial)]
+            zhat_trial_list.append(trial_zhat)
+            time_now += len_trial
+
+        if len(zhat_trial_list) != len(trial_break):
+            raise ValueError("trial list does not contain the correct number of trials")
+
+        truncated_list = []
+        for trial in zhat_trial_list:
+            retain = trial[0:min]
+            truncated_list.append(retain)
+
+        if len(truncated_list) != len(trial_break):
+            raise ValueError("truncated trial list does not contain the correct number of trials")
+        
+        stack = np.stack(truncated_list, axis=0)
+        result = stats.mode(stack, axis=0)
+        squeeze = result.mode.squeeze()
+        print("Successfully found mean zhat for full trial set.\n")
+        return squeeze # should be a numpy array of the averaged trial
+
+
+def trial_average_pc(trial_break, x_pc_2, trial_selection: Literal["go", "nogo", None] = None, gonogo = None):
+    min = int(np.min(trial_break)) # should return the minimum trial length
+
+    if trial_selection == "go" or trial_selection == "nogo":
+
+        pc_trial_list = []
+
+        gonogo_trial_break = []
+        for i in range(len(gonogo)):
+            idx = gonogo[i]
+            length = trial_break[idx-1]
+            gonogo_trial_break.append(length)
+
+        time_now = int(0)
+        for i in range(len(gonogo_trial_break)):
+            len_trial = int(gonogo_trial_break[i])
+            trial_pc = x_pc_2[time_now:(time_now + len_trial),:]
+            pc_trial_list.append(trial_pc)
+            time_now += len_trial
+
+        if len(pc_trial_list) != len(gonogo_trial_break):
+            raise ValueError("trial list does not contain the correct number of trials")
+
+        truncated_list = []
+        for trial in pc_trial_list:
+            retain = trial[0:min,:]
+            truncated_list.append(retain)
+
+        if len(truncated_list) != len(gonogo_trial_break):
+            raise ValueError("truncated trial list does not contain the correct number of trials")
+        
+        result = np.mean(truncated_list, axis=0)
+        print("\nSuccessfully found mean PC for full trial set.\n")
+        return result
+    
+    else:
+        pc_trial_list = []
+
+        time_now = int(0)
+        for i in range(len(trial_break)):
+            len_trial = int(trial_break[i])
+            trial_pc = x_pc_2[time_now:(time_now + len_trial),:]
+            pc_trial_list.append(trial_pc)
+            time_now += len_trial
+
+        if len(pc_trial_list) != len(trial_break):
+            raise ValueError("trial list does not contain the correct number of trials")
+
+        truncated_list = []
+        for trial in pc_trial_list:
+            retain = trial[0:min,:]
+            truncated_list.append(retain)
+
+        if len(truncated_list) != len(trial_break):
+            raise ValueError("truncated trial list does not contain the correct number of trials")
+        
+        result = np.mean(truncated_list, axis=0)
+        print("\nSuccessfully found mean PC for full trial set.\n")
+        return result
+    

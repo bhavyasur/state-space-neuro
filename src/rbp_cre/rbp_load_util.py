@@ -26,72 +26,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from utils.utils import mat_to_dict
 
 
-def load_behavior(folder_path):
-    """
-    INPUT: data is a folder for the session from a specific mouse. titled with session number and animal number, contains behavior_output folder which contains mat files
-    OUTPUT: spikes is a list, each item represents a neuron and is a numpy array of (num trials x timesteps)
-    """
-    outer = Path(folder_path)
-    inner = Path(outer / "behavior_output") 
-    behavior = inner / "behavior_Intan.mat"
-
-    b = scipy.io.loadmat(behavior)
-
-    print("mat type: " + str(type(b))) # datatype debugging
-    print("mat keys: " + str(b.keys())) # check keys in mat file
-
-    behavior_dict = {
-        "session_break_time": b['behavior']['session_break_time'], # length of session in ms?
-        "Fs": b['behavior']['Fs'], # sampling rate for intan
-        "GO_timeidx": b['behavior']['GO_timeidx'], # use to get trial times
-        "GOend_timeidx": b['behavior']['GOend_timeidx'], # use to get trial times
-        "NOGO_timeidx": b['behavior']['NOGO_timeidx'], # use to get trial times
-        "NOGOend_timeidx": b['behavior']['NOGOend_timeidx'], # use to get trial times
-        "triallength": b['behavior']['triallength'], # ??
-        "GOidx": b['behavior']['GOidx'], # ?? use to correspond trial data from time_idx to GO or NOGO
-        "NOGOidx": b['behavior']['NOGOidx'], # ?? use to correspond trial data from time_idx to GO or NOGO
-        "hit_idx": b['behavior']['hit_idx'], # identifies which trials were hits
-        "fa_idx": b['behavior']['fa_idx'], # identifies which trials were false alarms
-        "teach_idx": b['behavior']['teach_idx'], # identifies which trials were teach trials
-        "missed_teach_idx": b['behavior']['missed_teach_idx'],
-        "hit_rate": b['behavior']['hit_rate'],
-        "fa_rate": b['behavior']['fa_rate'],
-        "GO_lick": b['behavior']['GO_lick'],
-        "NOGO_lick": b['behavior']['NOGO_lick'],
-        "trial_map": b['behavior']['trial_map']
-    }
-
-    return behavior_dict
-
-
-
-def load_calcium(folder_path):
-    """
-    INPUT: data is a folder for the session from a specific mouse. titled with session number and animal number, contains behavior_output folder which contains mat files
-    OUTPUT: spikes is a list, each item represents a neuron and is a numpy array of (num trials x timesteps)
-    """
-    outer = Path(folder_path)
-    inner = Path(outer / "behavior_output") 
-    calcium = inner / "Ca_imaging_data.mat"
-
-    c = scipy.io.loadmat(calcium)
-
-    roi1 = c['Ca_data']['ROI'][:, 0]
-    roi2 = c['Ca_data']['ROI'][:, 1]
-    roi3 = c['Ca_data']['ROI'][:, 2]
-
-    calcium_dict_roi1 = {
-        "trial_break": roi1["trial_break"],
-        "Fs": roi1["Fs"],
-        "ROIcentroid": roi1["ROIcentroid"],
-        "DeltaFoverF": roi1["DeltaFoverF"], # (num trials, num_neurons, num_timebins). data in each cell of array is indicative of activity.
-        "F": roi1["F"],
-        "trial_start_time": roi1["trial_start_time"],
-        "trial_end_time": roi1["trial_end_time"],
-    }
-
-
-
 def load_dfoverf_rbp(folder_path, path_type: Literal["suite2p", "manual", None] = None, roi: int = None):
     """returns a list of arrays. each item in list is a trial, each array is (num_neurons x num_timesteps)"""
 
@@ -101,7 +35,10 @@ def load_dfoverf_rbp(folder_path, path_type: Literal["suite2p", "manual", None] 
     if path_type == "suite2p":
         calcium = inner / "Ca_suite2p_data.mat"
         c = scipy.io.loadmat(calcium, simplify_cells=True)
-        pre = c['Ca_data']['ROI']['DeltaFoverF']
+        if roi: # for tuft v trunk. roi=1 is tuft, roi=2 is trunk
+            pre = c['Ca_data']['ROI'][int(roi-1)]['DeltaFoverF']
+        else:
+            pre = c['Ca_data']['ROI']['DeltaFoverF']
 
     elif path_type == "manual":
         c = scipy.io.loadmat(folder_path, simplify_cells=True) # it's not a folder, it's a file, but variable name is folder_path
@@ -151,6 +88,7 @@ def full_session_trialsliced_rbp(dfoverf):
     # 1st cut up each trial and turn into a list
 
     all_neurons = []
+    trial_break_sliced = np.zeros(num_trials)
     for i in range(num_neurons):
         sliced_list = []
         time_now = 0
@@ -164,6 +102,7 @@ def full_session_trialsliced_rbp(dfoverf):
             # print("sliced trial shape", np.shape(sliced_trial))
             sliced_list.append(sliced_trial)
             slice_length = np.shape(sliced_trial)[0]
+            trial_break_sliced[j] = slice_length
             time_now += slice_length
 
         single_neuron_concat = np.zeros(time_now)
@@ -186,7 +125,7 @@ def full_session_trialsliced_rbp(dfoverf):
     for i in range(num_neurons):
         full_sess[i, :] = all_neurons[i]
 
-    return full_sess
+    return full_sess, trial_break_sliced
 
 def load_trialtype_idx_rbp(data_path, path_type: Literal["suite2p", "manual", None] = None, roi: int = None):
 
@@ -196,8 +135,12 @@ def load_trialtype_idx_rbp(data_path, path_type: Literal["suite2p", "manual", No
     if path_type == "suite2p":
         calcium = inner / "Ca_suite2p_data.mat"
         c = scipy.io.loadmat(calcium, simplify_cells=True)
-        go = c['Ca_data']['ROI']['GO_trial']
-        nogo = c['Ca_data']['ROI']['NOGO_trial']
+        if roi:
+            go = c['Ca_data']['ROI'][int(roi-1)]['GO_trial']
+            nogo = c['Ca_data']['ROI'][int(roi-1)]['NOGO_trial']
+        else:
+            go = c['Ca_data']['ROI']['GO_trial']
+            nogo = c['Ca_data']['ROI']['NOGO_trial']
 
     elif path_type == "manual":
         c = scipy.io.loadmat(folder_path, simplify_cells=True) # it's not a folder, it's a file, but variable name is folder_path
@@ -221,7 +164,10 @@ def load_trialbreak_rbp(data_path, path_type: Literal["suite2p", "manual", None]
     if path_type == "suite2p":
         calcium = inner / "Ca_suite2p_data.mat"
         c = scipy.io.loadmat(calcium, simplify_cells=True)
-        pre = c['Ca_data']['ROI']['trial_break']
+        if roi:
+            pre = c['Ca_data']['ROI'][int(roi-1)]['trial_break']
+        else:
+            pre = c['Ca_data']['ROI']['trial_break']
 
     elif path_type == "manual":
         c = scipy.io.loadmat(folder_path, simplify_cells=True) # it's not a folder, it's a file, but variable name is folder_path

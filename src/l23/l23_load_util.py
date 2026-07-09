@@ -106,6 +106,7 @@ def full_session_trialsliced_l23(dfoverf):
     # 1st cut up each trial and turn into a list
 
     all_neurons = []
+    trial_break_sliced = np.zeros(num_trials)
     for i in range(num_neurons):
         sliced_list = []
         time_now = 0
@@ -119,6 +120,7 @@ def full_session_trialsliced_l23(dfoverf):
             # print("sliced trial shape", np.shape(sliced_trial))
             sliced_list.append(sliced_trial)
             slice_length = np.shape(sliced_trial)[0]
+            trial_break_sliced[j] = slice_length
             time_now += slice_length
 
         single_neuron_concat = np.zeros(time_now)
@@ -141,7 +143,7 @@ def full_session_trialsliced_l23(dfoverf):
     for i in range(num_neurons):
         full_sess[i, :] = all_neurons[i]
 
-    return full_sess
+    return full_sess, trial_break_sliced
 
 def gonogotrials_sliced_l23(dfoverf, gonogo):
     """
@@ -164,6 +166,7 @@ def gonogotrials_sliced_l23(dfoverf, gonogo):
     # 1st cut up each trial and turn into a list
 
     all_neurons = []
+
     for i in range(num_neurons):
         sliced_list = []
         time_now = 0
@@ -239,20 +242,19 @@ def load_trialbreak_l23(raw_data):
     trial_break = c['Ca_data']['ROI']['trial_break']
 
     return np.asarray(trial_break)
+    
+
 
 # take the non-trial-sliced version for this
-def behavioral_ann_L23(raw_data, type, plot=False):
+def behavioral_plot_l23(trial_break, l23_type, ax=None, trial_structure: Literal["single_trial", None] = None, trial_idx=None):
     """ FOR L23: 
         Exact time of piston 1.67 seconds until 2.8 seconds after piston start: So your online frames will be frame number (1.67 until 2.78)*frame rate
         Offline is anything beyond 8 seconds after beginning of trial.
     """
-    dfoverf = load_dfoverf_l23(raw_data)
-    full = full_session_l23(dfoverf)
-    trial_idx = load_trialbreak_l23(raw_data).astype(int) # should be 1d array
 
-    if type == "bessel":
+    if l23_type == "bessel":
         frame_rate = 30.08 # frames per second
-    elif type == "etl":
+    elif l23_type == "etl":
         frame_rate = 15.01 # frames per second
     else:
         raise ValueError("type must be 'bessel' or 'etl'")
@@ -261,58 +263,40 @@ def behavioral_ann_L23(raw_data, type, plot=False):
     online_end = 2.78 * frame_rate
     offline_start = 8 * frame_rate
 
-    online_start_list = []
-    online_end_list = []
-    offline_start_list = []
-    offline_end_list = [] # this is just end of each trial
+    if trial_structure == "single_trial":
+        if not trial_idx:
+            raise ValueError("trial_idx must be set to use trial_structure='single_trial'")
+        my_trial_length = trial_break[trial_idx]
 
-    time_now = 0
-    for i in range(len(trial_idx)):
-        l = trial_idx[i] # l stands for trial length
+    else:
+        min = np.min(trial_break)
+        my_trial_length = min        
 
-        on_s = online_start + time_now
-        on_e = online_end + time_now
-        off_s = offline_start + time_now
-        off_e = time_now + l
-        online_start_list.append(on_s)
-        online_end_list.append(on_e)
-        offline_start_list.append(off_s)
-        offline_end_list.append(off_e)
+    on_s = [online_start]
+    on_e = [online_end]
+    off_s = [offline_start]
+    off_e = [my_trial_length - 1]
 
-        time_now += l
-
-    online_durations = np.subtract(online_end_list, online_start_list)
-    offline_durations = np.subtract(offline_end_list, offline_start_list)
+    online_duration = np.subtract(on_e, on_s)
+    offline_duration = np.subtract(off_e, off_s)
     
     # make gantt chart of online offline for full session
-    fig, ax = plt.subplots(figsize=(12, 2))
-    ax.barh(0.3, online_durations, left=online_start_list, height=0.2,color='green', label="online", alpha=0.5)
-    ax.barh(0.1, offline_durations, left=offline_start_list, height=0.2, color='red', label="offline", alpha=0.5)
-    ax.set_xlabel("Time (frames)")
-    ax.set_title("Online and Offline Periods for Full Session")
-    ax.legend()
 
-    if plot==True:
-        plt.tight_layout()
-        plt.show()
+    categories = ["offline", "online"]
+    ax.set_yticks([0.075, 0.225], categories)
+    ax.barh(0.225, online_duration, left=on_s, height=0.15, color='green', label="online", alpha=0.5)
+    ax.barh(0.075, offline_duration, left=off_s, height=0.15, color='red', label="offline", alpha=0.5)
+    ax.set_xlim(0, my_trial_length-1)
 
     return ax
-    
 
     
 # ---------- running things but ignore for now
 
 if __name__ == "__main__":
-    folder_path = "data/shivam/ETL_140_250/075402/Naive/GO"
 
-    print("layer 2\n")
-    load_dfoverf_l23(folder_path, layer="L2")
+    folder_path = "data/shivam/Bessel_140_250/1348DR/Expert/GO"
 
-    print("layer 3\n")
-    load_dfoverf_l23(folder_path, layer="L3")
-
-    print("no layer\n")
-    load_dfoverf_l23(folder_path)
-
-    # behavioral_ann_L23(folder_path, type="bessel", plot=True)
-  
+    go, nogo = load_trialtype_idx_l23(folder_path)
+    print("go", go)
+    print("nogo", nogo)
