@@ -284,7 +284,71 @@ def trace_sanity_check(full_sess, random_seed=None):
 
     return fig, axes
 
+
+def behavioral_plot_rbp(raw_data, trial_break, path_type: Literal["suite2p", "manual", None] = None, ax=None, 
+                        trial_structure: Literal["single_trial", None] = None, trial_idx=None, roi: int = None):
+    """ should load in trial_break_sliced since the trials have 5% cut off beginning and end"""
     
+    outer = Path(raw_data)
+    inner = Path(outer / "behavior_output") 
+
+    if path_type == "suite2p":
+        calcium = inner / "Ca_suite2p_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        if roi: # for tuft v trunk. roi=1 is tuft, roi=2 is trunk
+            Fs = c['Ca_data']['ROI'][int(roi-1)]['Fs'] # float value
+            piston_firing = c['Ca_data']['ROI'][int(roi-1)]['piston_time'] # (1x2) array of floats
+        else:
+            Fs = c['Ca_data']['ROI']['Fs'] # float value
+            piston_firing = c['Ca_data']['ROI']['piston_time'] # (1x2) array of floats
+
+    elif path_type == "manual":
+        c = scipy.io.loadmat(folder_path, simplify_cells=True) # it's not a folder, it's a file, but variable name is folder_path
+        Fs = c['Ca_data']['ROI']['Fs'] # float value
+        piston_firing = c['Ca_data']['ROI']['piston_time'] # (1x2) array of floats
+
+    else:
+        calcium = inner / "Ca_imaging_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        Fs = c['Ca_data']['ROI'][int(roi-1)]['Fs'] # float value
+        piston_firing = c['Ca_data']['ROI'][int(roi-1)]['piston_time'] # (1x2) array of floats
+
+    piston_1 = piston_firing[0] * Fs
+    piston_2 = piston_firing[1] * Fs
+
+    if trial_structure == "single_trial":
+        if not trial_idx:
+            raise ValueError("trial_idx must be set to use trial_structure='single_trial'")
+        my_trial_length = trial_break[trial_idx]
+
+    else:
+        min = np.min(trial_break)
+        my_trial_length = min        
+
+    one_s = [0]
+    one_e = [piston_1]
+    two_s = [piston_1]
+    two_e = [piston_2]
+    three_s = [piston_2]
+    three_e = [my_trial_length - 1]
+
+    one_dur = np.subtract(one_e, one_s)
+    two_dur = np.subtract(two_e, two_s)
+    three_dur = np.subtract(three_e, three_s)
+    
+    # make gantt chart of online offline for full session
+
+    categories = ["baseline", "sensory sampling", "reward"]
+
+    ax.set_yticks([0.075, 0.225, 0.375], categories)
+    ax.barh(0.075, one_dur, left=one_s, height=0.15, color='red', label="baseline", alpha=0.5)
+    ax.barh(0.225, two_dur, left=two_s, height=0.15, color='blue', label="sensory sampling", alpha=0.5)
+    ax.barh(0.375, three_dur, left=three_s, height=0.15, color='green', label="reward", alpha=0.5)
+
+    ax.set_xlim(0, my_trial_length-1)
+
+    return ax
+
 
 # ---------- running things but ignore for now
 

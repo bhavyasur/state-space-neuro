@@ -10,42 +10,42 @@ from src.rslds.rSLDS import run_rslds_pipeline, DataType
 
 if __name__=="__main__":
 
-    day1_5 = "data/shulan/#61635M_Rbp_GCaMP_mRuby/092324_61635" # SET MANUALLY
+    day1_5 = "data/shulan/#61635_Rbp_GCaMP_mRuby/092324_61635" # SET MANUALLY
     plot_key1_5 = "#61635/092324_61635" # SET MANUALLY
 
-    day2_5 = "data/shulan/#61635M_Rbp_GCaMP_mRuby/100124_61635" # SET MANUALLY
+    day2_5 = "data/shulan/#61635_Rbp_GCaMP_mRuby/100124_61635" # SET MANUALLY
     plot_key2_5 = "#61635/100124_61635" # SET MANUALLY
 
-    day3_5 = "data/shulan/#61635M_Rbp_GCaMP_mRuby/101624_61635" # SET MANUALLY
+    day3_5 = "data/shulan/#61635_Rbp_GCaMP_mRuby/101624_61635" # SET MANUALLY
     plot_key3_5 = "#61635/101624_61635" # SET MANUALLY
 
-    day4_5 = "data/shulan/#61635M_Rbp_GCaMP_mRuby/103124_61635" # SET MANUALLY
+    day4_5 = "data/shulan/#61635_Rbp_GCaMP_mRuby/103124_61635" # SET MANUALLY
     plot_key4_5 = "#61635/103124_61635" # SET MANUALLY
 
-    day5_5  = "data/shulan/#61635M_Rbp_GCaMP_mRuby/110324_61635" # SET MANUALLY
+    day5_5  = "data/shulan/#61635_Rbp_GCaMP_mRuby/110324_61635" # SET MANUALLY
     plot_key5_5 = "#61635/110324_61635" # SET MANUALLY
 
 
 
-    day1_7 = "data/shulan/#61637M_Rbp_GCaMP_mRuby/092324_61637" # SET MANUALLY
+    day1_7 = "data/shulan/#61637_Rbp_GCaMP_mRuby/092324_61637" # SET MANUALLY
     plot_key1_7 = "#61637/092324_61637" # SET MANUALLY
 
-    day2_7 = "data/shulan/#61637M_Rbp_GCaMP_mRuby/101624_61637" # SET MANUALLY
+    day2_7 = "data/shulan/#61637_Rbp_GCaMP_mRuby/101624_61637" # SET MANUALLY
     plot_key2_7 = "#61637/101624_61637" # SET MANUALLY
 
-    day3_7 = "data/shulan/#61637M_Rbp_GCaMP_mRuby/102124_61637" # SET MANUALLY
+    day3_7 = "data/shulan/#61637_Rbp_GCaMP_mRuby/102124_61637" # SET MANUALLY
     plot_key3_7 = "#61637/102124_61637" # SET MANUALLY
 
-    day4_7 = "data/shulan/#61637M_Rbp_GCaMP_mRuby/102524_61637" # SET MANUALLY
+    day4_7 = "data/shulan/#61637_Rbp_GCaMP_mRuby/102524_61637" # SET MANUALLY
     plot_key4_7 = "#61637/102524_61637" # SET MANUALLY
 
-    day5_7  = "data/shulan/#61637M_Rbp_GCaMP_mRuby/102824_61637" # SET MANUALLY
+    day5_7  = "data/shulan/#61637_Rbp_GCaMP_mRuby/102824_61637" # SET MANUALLY
     plot_key5_7 = "#61637/102824_61637" # SET MANUALLY
 
-    day6_7  = "data/shulan/#61637M_Rbp_GCaMP_mRuby/103024_61637" # SET MANUALLY
+    day6_7  = "data/shulan/#61637_Rbp_GCaMP_mRuby/103024_61637" # SET MANUALLY
     plot_key6_7 = "#61637/103024_61637" # SET
 
-    day7_7  = "data/shulan/#61637M_Rbp_GCaMP_mRuby/110724_61637" # SET MANUALLY
+    day7_7  = "data/shulan/#61637_Rbp_GCaMP_mRuby/110724_61637" # SET MANUALLY
     plot_key7_7 = "#61637/110724_61637" # SET
 
 

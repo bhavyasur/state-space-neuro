@@ -290,17 +290,15 @@ def plot_pca_flowfield(model, W, mu, plot_key,
     return ax
 
 
-def eigs_timeconstants(model, state_idx, model_type=Literal["true", "csv"], dim_idx=None):
+def eigs_timeconstants(model, state_idx, model_type: Literal["csv", None] = None, dim_idx=None):
     """ Takes in dynamics matrix from model and returns eigenvalues in numpy array. Then calculates time constants per Nair
     equation and returns time constants as numpy array
     """
-    if model_type == "true":
-        A = model.dynamics.As # A shape is (num_states, 10, 10)
-        matrix = A[state_idx]
-    elif model_type == "csv":
+    if model_type == "csv":
         matrix = model
     else:
-        raise ValueError("Parameter model_type must be set to either 'true' or 'csv'.")
+        A = model.dynamics.As # A shape is (num_states, 10, 10)
+        matrix = A[state_idx]
     
     tuple = np.linalg.eig(matrix)
     eigenvalues = tuple.eigenvalues
@@ -371,19 +369,18 @@ def plot_cv_heatmap(results, param_grid, ax):
 
     return ax
 
-def single_neuron_contribution(state_idx, model=None, As=None, Cs=None, model_type: Literal["true", "csv", None] = None):
+def single_neuron_contribution(state_idx, model=None, As=None, Cs=None, model_type: Literal["csv", None] = None):
     """finds single neuron weights for the integration dimension (max eigenvalue) of a specific discrete state of your rSLDS model"""
 
     # determine which dimension you want to plot the single neuron contribution to. this function is set to plot single neuron contribution for largest eigenvalue dimension (integration dimension)
     
-    if model_type == "true":
-        eigs, vecs, tcs, max_idx = eigs_timeconstants(model, state_idx=state_idx, model_type=model_type, dim_idx='max') # returns max eigenvalue, corresponding eigenvector, time constant, index of max eigenvalue
-        C = abs(np.squeeze(model.emissions.Cs))
-    elif model_type == "csv":
+    if model_type == "csv":
         eigs, vecs, tcs, max_idx = eigs_timeconstants(As, state_idx=state_idx, model_type=model_type, dim_idx='max') # returns max eigenvalue, corresponding eigenvector, time constant, index of max eigenvalue
         C = Cs
     else:
-        raise ValueError("model_type should be 'true' or 'csv'")
+        eigs, vecs, tcs, max_idx = eigs_timeconstants(model, state_idx=state_idx, model_type=model_type, dim_idx='max') # returns max eigenvalue, corresponding eigenvector, time constant, index of max eigenvalue
+        C = abs(np.squeeze(model.emissions.Cs))
+
     sorted_indices = np.argsort(-C[:, max_idx])  # Sort by contribution to the first dimension
 
     fig = plt.figure(figsize=(10, 7))
@@ -414,7 +411,7 @@ def single_neuron_contribution(state_idx, model=None, As=None, Cs=None, model_ty
 
     return fig
 
-def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break, trial_structure: Literal["single_trial", None] = None, trial_idx: int = None):
+def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break, trial_structure: Literal["single_trial", "full_sess", None] = None, trial_idx: int = None):
 
     if trial_structure == "single_trial":
         start, end = select_trial_from_trial_break(trial_break, trial_idx)
@@ -423,11 +420,14 @@ def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break, trial_structu
         trial_len = end - start
         diff = np.diff(zhat_lem[start:end])
         timesteps = len(zhat_lem[start:end])
+    elif trial_structure == "full_sess":
+        diff = np.diff(zhat_lem)
+        timesteps = len(zhat_lem)
+        trial_len = len(zhat_lem)
     else: # this is for trial-averaged case where the zhat_lem parameter is input as the trial-average, with length of a single trial.
         diff = np.diff(zhat_lem)
         timesteps = len(zhat_lem)
         trial_len = len(zhat_lem)
-    
 
     # EX: np.array([0,0,0,0,1,1,1,2,2,1,0,0]) # len = 12
     # rising_draft = [4, 7, 9, 10] # should be 0, 4, 7, 9, 10
@@ -505,6 +505,10 @@ def trial_average_zhat(trial_break, zhat_lem, trial_selection: Literal["go", "no
         for trial in zhat_trial_list:
             retain = trial[0:min]
             truncated_list.append(retain)
+
+        print("len truncated list", len(truncated_list))
+        print("shape of first item trunc", np.shape(truncated_list[0]))
+        print("shape of last item trunc", np.shape(truncated_list[-1]))
 
         if len(truncated_list) != len(gonogo_trial_break):
             raise ValueError("truncated trial list does not contain the correct number of trials")
@@ -603,3 +607,30 @@ def trial_average_pc(trial_break, x_pc_2, trial_selection: Literal["go", "nogo",
         print("\nSuccessfully found mean PC for full trial set.\n")
         return result
     
+
+def full_go_nogo(trial_break, zhat_lem, trial_selection: Literal["go", "nogo", None] = None, gonogo=None):
+    min = int(np.min(trial_break)) # should return the minimum trial length
+
+    if trial_selection == "go" or trial_selection == "nogo":
+
+        zhat_trial_list = []
+
+        gonogo_trial_break = []
+        for i in range(len(gonogo)):
+            idx = gonogo[i]
+            length = trial_break[idx-1]
+            gonogo_trial_break.append(length)
+
+        time_now = int(0)
+
+        for i in range(len(gonogo_trial_break)):
+            len_trial = int(gonogo_trial_break[i])
+            trial_zhat = zhat_lem[time_now:(time_now + len_trial)]
+            zhat_trial_list.append(trial_zhat)
+            time_now += len_trial
+
+        if len(zhat_trial_list) != len(gonogo_trial_break):
+            raise ValueError("trial list does not contain the correct number of trials")
+        
+        arr = np.concatenate(zhat_trial_list)
+        return arr

@@ -12,18 +12,19 @@ import glob
 # 2) loading functions + utilities for rSLDS. add to this if adding more data types
 from src.rbp_cre.rbp_load_util import ( load_dfoverf_rbp, full_session_rbp, 
                                        visualize_trace, trace_sanity_check, full_session_trialsliced_rbp, 
-                                       load_trialtype_idx_rbp, gonogotrials_sliced_rbp, load_trialbreak_rbp )
+                                       load_trialtype_idx_rbp, gonogotrials_sliced_rbp, load_trialbreak_rbp, behavioral_plot_rbp )
 from src.dual_shank.ds_load_util import load_spikes, full_session, visualize_session 
 from src.l23.l23_load_util import ( load_dfoverf_l23, full_session_l23, 
                                    full_session_trialsliced_l23, load_trialtype_idx_l23,
-                                   trace_sanity_check_l23, gonogotrials_sliced_l23, behavioral_plot_l23, load_trialbreak_l23 )
+                                   trace_sanity_check_l23, gonogotrials_sliced_l23, behavioral_plot_l23, 
+                                   load_trialbreak_l23, session_concat_pipeline_l23 )
 from src.gcamp8.gcamp8_load_util import ( load_dfoverf_dendrite, full_session_dendrite, 
                                          full_session_trialsliced_dendrite, full_session_trialsliced_thresholded_dendrite, load_dfoverf_problemtest,
                                          trace_sanity_check_dendrite, session_concat_pipeline, spikes_smooth, load_trialbreak_dendrite, 
                                          gonogotrials_sliced_dendrite, load_trialtype_idx_dendrite, behavioral_plot_dendrite )
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
-                                  softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat )
+                                  softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, full_go_nogo )
 
 # 3) other necessary imports
 import autograd.numpy as np
@@ -74,9 +75,9 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
                             layer: Literal["L2", "L3", None] = None,
                             testing: bool = False,
                             trial_idx: int = None,
-                            trial_structure: Literal["single_trial", None] = None,
-                            gcamp_specific_loadtype: Literal["single_session_thresholded", "session_concat", "spikes", None] = None,
-                            roi=None, date=None, l23_type: Literal["bessel", "etl", None] = None, plot: bool=False, nxpts=20, nypts=20, alpha=0.8, num_iters=50, margin=1.0):
+                            trial_structure: Literal["single_trial", "full_sess", None] = None,
+                            specific_loadtype: Literal["single_session_thresholded", "session_concat", "spikes", None] = None,
+                            roi=None, date=None, l23_type: Literal["bessel", "etl", None] = None, plot: bool=False, save_output: bool=False, nxpts=20, nypts=20, alpha=0.8, num_iters=50, margin=1.0):
     """
     Run rSLDS on a full session of data, then PCA-project the resulting latent trajectory
     to 2D and plot the flow field of each discrete state's dynamics in PC space.
@@ -124,54 +125,61 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         if trial_selection == "go":
             data = go_trials.T.astype(int)
             print("Running on go trials only.\n")
+            for_trace = go_trials
         elif trial_selection == "nogo":
             data = nogo_trials.T.astype(int)
             print("Running on nogo trials only.\n")
+            for_trace = nogo_trials
         else:
             data = full.T.astype(int)
             print("Running on full session.\n")
+            for_trace = full
 
     elif type is DataType.L23:
-        trial_break = load_trialbreak_l23(raw_data)
 
-        dfoverf = load_dfoverf_l23(raw_data, layer=layer)
-        if layer:
-            print(f"Loaded data for layer {layer}.\n")
-        go_idx, nogo_idx = load_trialtype_idx_l23(raw_data)
-        full, trial_break_sliced = full_session_trialsliced_l23(dfoverf)
-        go_trials = gonogotrials_sliced_l23(dfoverf, go_idx)
-        nogo_trials = gonogotrials_sliced_l23(dfoverf, nogo_idx)
-
-        if trial_selection == "go":
-            data = go_trials.T.astype(int)
-            print("Running on go trials only.\n")
-        elif trial_selection == "nogo":
-            data = nogo_trials.T.astype(int)
-            print("Running on nogo trials only.\n")
-        else:
+        if specific_loadtype == "session_concat":
+            full, trial_break_sliced = session_concat_pipeline_l23(list_of_folder_paths=raw_data, trial_selection=trial_selection, layer=layer) # FULL HERE = CONCATENATED SESSIONS. raw_data is a list
+            go_idx, nogo_idx = load_trialtype_idx_l23(raw_data, specific_loadtype="session_concat")
             data = full.T.astype(int)
-            print("Running on full session.\n")
-        
-    elif type is DataType.GCaMP8:
-        if path_type == "sliceTCA":
-            trial_break = load_trialbreak_dendrite(raw_data, date, path_type=path_type)
+            for_trace = full
         else:
-            trial_break = load_trialbreak_dendrite(raw_data, date)
+            dfoverf = load_dfoverf_l23(raw_data, layer=layer)
+            if layer:
+                print(f"Loaded data for layer {layer}.\n")
+            go_idx, nogo_idx = load_trialtype_idx_l23(raw_data)
+            full, trial_break_sliced = full_session_trialsliced_l23(dfoverf)
+            go_trials = gonogotrials_sliced_l23(dfoverf, go_idx)
+            nogo_trials = gonogotrials_sliced_l23(dfoverf, nogo_idx)
+
+            if trial_selection == "go":
+                data = go_trials.T.astype(int)
+                print("Running on go trials only.\n")
+                for_trace = go_trials
+            elif trial_selection == "nogo":
+                data = nogo_trials.T.astype(int)
+                print("Running on nogo trials only.\n")
+                for_trace = nogo_trials
+            else:
+                data = full.T.astype(int)
+                print("Running on full session.\n")
+                for_trace = full
+            
+    elif type is DataType.GCaMP8:
 
         if testing: # if testing
             dfoverf = load_dfoverf_problemtest(raw_data, path_type=path_type)
             full, trial_break_sliced = full_session_trialsliced_dendrite(dfoverf)
             data = full.T.astype(int)
         else:
-            if gcamp_specific_loadtype == "single_session_thresholded":
+            if specific_loadtype == "single_session_thresholded":
                 dfoverf = load_dfoverf_dendrite(raw_data, date)
                 full = full_session_trialsliced_thresholded_dendrite(dfoverf)
                 print(f"Thresholded full session shape: {np.shape(full)}\n")
                 data = full.T.astype(int)
-            elif gcamp_specific_loadtype == "session_concat":
-                full = session_concat_pipeline(raw_data, date) # FULL HERE = CONCATENATED SESSIONS
+            elif specific_loadtype == "session_concat":
+                full = session_concat_pipeline(raw_data, date, trial_selection=trial_selection, path_type=path_type) # FULL HERE = CONCATENATED SESSIONS
                 data = full.T.astype(int)
-            elif gcamp_specific_loadtype == "spikes":
+            elif specific_loadtype == "spikes":
                 data = spikes_smooth(raw_data, date).astype(int)
                 full = data.T
             else: # NORMAL CASE (gcamp_specific_loadtype = None)
@@ -182,7 +190,7 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
                     dfoverf = load_dfoverf_dendrite(raw_data, date)
                     go_idx, nogo_idx = load_trialtype_idx_dendrite(raw_data, session_date=date)
                 else:
-                    raise ValueError("path type should be 'sliceTCA' or None for the normal, single-session case (gcamp_specific_loadtype == None).")
+                    raise ValueError("path type should be 'sliceTCA' or None for the normal, single-session case (specific_loadtype == None).")
 
                 full, trial_break_sliced = full_session_trialsliced_dendrite(dfoverf)
                 go_trials = gonogotrials_sliced_dendrite(dfoverf, go_idx)
@@ -191,12 +199,15 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
                 if trial_selection == "go":
                     data = go_trials.T.astype(int)
                     print("Running on go trials only.\n")
+                    for_trace = go_trials
                 elif trial_selection == "nogo":
                     data = nogo_trials.T.astype(int)
                     print("Running on nogo trials only.\n")
+                    for_trace = nogo_trials
                 else:
                     data = full.T.astype(int)
                     print("Running on full session.\n")
+                    for_trace = full
 
     else:
         raise ValueError(f"Unsupported DataType: {type}")
@@ -271,6 +282,8 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
 
     if trial_selection:
         key = f"{key}/{trial_selection}"
+    else:
+        key = f"{key}/full"
     
     if trial_idx and trial_structure == "single_trial":
         key = f"{key}/trial{trial_idx}"
@@ -294,17 +307,17 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         fig0.savefig(output_folder / "spikes.png")
 
     elif type is DataType.RbpCre:
-        fig0, axes0 = trace_sanity_check(full, random_seed=42)
+        fig0, axes0 = trace_sanity_check(for_trace, random_seed=42)
         fig0.suptitle(f"Calcium Trace of Neurons: {key}")
         fig0.savefig(output_folder / "calcium_trace.png")
 
     elif type is DataType.L23:
-        fig0, axes0 = trace_sanity_check_l23(full, random_seed=42)
+        fig0, axes0 = trace_sanity_check_l23(for_trace, random_seed=42)
         fig0.suptitle(f"Calcium Trace of Neurons: {key}")
         fig0.savefig(output_folder / "calcium_trace.png")
     
     elif type is DataType.GCaMP8:
-        fig0, axes0 = trace_sanity_check_dendrite(full, random_seed=42)
+        fig0, axes0 = trace_sanity_check_dendrite(for_trace, random_seed=42)
         fig0.suptitle(f"Calcium Trace of Dendrites: {key}")
         fig0.savefig(output_folder / "calcium_trace.png")
 
@@ -365,9 +378,9 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     else:
 
         if trial_selection == "go":
-            avg_trial = trial_average_pc(trial_break_sliced, x_pc_2, trial_selection="go", gonogo=go_idx)
+            avg_trial = trial_average_pc(trial_break_sliced, x_pc_2, trial_selection=trial_selection, gonogo=go_idx)
         elif trial_selection == "nogo":
-            avg_trial = trial_average_pc(trial_break_sliced, x_pc_2, trial_selection="nogo", gonogo=nogo_idx)
+            avg_trial = trial_average_pc(trial_break_sliced, x_pc_2, trial_selection=trial_selection, gonogo=nogo_idx)
         else:
             avg_trial = trial_average_pc(trial_break_sliced, x_pc_2)
         
@@ -406,6 +419,20 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
             behavioral_plot_l23(trial_break_sliced, l23_type=l23_type, trial_structure=trial_structure, ax=ax1d_b, trial_idx=trial_idx)
             ax1d_a.set_title(f"Most Likely Discrete State, Trial {trial_idx}: \n{key}")
             ax1d_b.set_title(f"Online vs. Offline Phases of Trial, Trial {trial_idx}: \n{key}")
+
+        elif trial_structure == "full_sess":
+            if trial_selection == "go":
+                full = full_go_nogo(trial_break_sliced, zhat_lem, trial_selection=trial_selection, gonogo=go_idx)
+            elif trial_selection == "nogo":
+                full = full_go_nogo(trial_break_sliced, zhat_lem, trial_selection=trial_selection, gonogo=nogo_idx)
+            else:
+                full = zhat_lem
+
+            most_likely_state_plot(disc_states, full, ax1d_a, trial_break=trial_break_sliced, trial_structure=trial_structure)
+            behavioral_plot_l23(trial_break_sliced, l23_type=l23_type, ax=ax1d_b, trial_structure=trial_structure)
+
+            ax1d_a.set_title(f"Most Likely Discrete State, Full Session: \n{key}")
+            ax1d_b.set_title(f"Online vs. Offline Phases of Trial, Full Session: \n{key}")
 
         else: # trial-averaged case
             
@@ -471,7 +498,45 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         
         fig1d.tight_layout(pad=2)
         fig1d.savefig(output_folder / "most_likely_state.png")
+
+    elif type is DataType.RbpCre:
+        fig1d, [ax1d_a, ax1d_b] = plt.subplots(nrows=2, ncols=1, figsize=(10, 6))
+
+        if trial_structure == "single_trial":
+            if trial_selection == "go" or trial_selection == "nogo":
+                warnings.warn("Since you selected 'single_trial' as your trial_structure, this does not take into account whether you have selected go vs. " \
+                "nogo trials, simply selects the trial index you set. If you want to take into account go vs nogo trials, us the trial_averaged choice for trial_structure.")
+
+            if not trial_idx:
+                raise ValueError("trial_idx must be set for trial_structure to be single trial.")
+            
+            most_likely_state_plot(disc_states, zhat_lem, ax=ax1d_a, trial_break=trial_break_sliced, trial_structure=trial_structure, trial_idx=trial_idx)
+            behavioral_plot_rbp(raw_data, trial_break_sliced, path_type='suite2p', ax=ax1d_b, trial_structure=trial_structure, trial_idx=trial_idx, roi=roi)
         
+            ax1d_a.set_title(f"Most Likely Discrete State, Trial {trial_idx}: \n{key}")
+            ax1d_b.set_title(f"Online vs. Offline Phases of Trial, Trial {trial_idx}: \n{key}")
+
+        else: # trial averaged
+            
+            if trial_selection == "go":
+                avg_trial = trial_average_zhat(trial_break_sliced, zhat_lem, trial_selection="go", gonogo=go_idx)
+            elif trial_selection == "nogo":
+                avg_trial = trial_average_zhat(trial_break_sliced, zhat_lem, trial_selection="nogo", gonogo=nogo_idx)
+            else:
+                avg_trial = trial_average_zhat(trial_break_sliced, zhat_lem) #zhat lem averaged - equal to length of one trial
+
+            most_likely_state_plot(disc_states, avg_trial, ax1d_a, trial_break=trial_break_sliced)
+            behavioral_plot_rbp(raw_data, trial_break_sliced, path_type='suite2p', ax=ax1d_b, roi=roi)
+
+            ax1d_a.set_title(f"Most Likely Discrete State, Trial Averaged: \n{key}")
+            ax1d_b.set_title(f"Online vs. Offline Phases: \n{key}")
+
+        ax1d_a.set_xlabel("Time (frames)")
+        ax1d_b.set_xlabel("Time (frames)")
+        
+        fig1d.tight_layout(pad=2)
+        fig1d.savefig(output_folder / "most_likely_state.png")
+
     else:
         fig1d, ax1d = plt.subplots(figsize=(10, 4))
         avg_trial = trial_average_zhat(trial_break_sliced, zhat_lem)
@@ -479,11 +544,11 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         if trial_structure == "single_trial":
             if not trial_idx:
                 raise ValueError("trial_idx must be set for trial_structure to be single trial.")
-            most_likely_state_plot(disc_states, zhat_lem, ax1d_a, trial_break=trial_break_sliced, trial_idx=trial_idx)
+            most_likely_state_plot(disc_states, zhat_lem, ax1d, trial_break=trial_break_sliced, trial_idx=trial_idx)
             ax1d.set_title(f"Most Likely Discrete State, Trial {trial_idx}: \n{key}")
 
         else:
-            most_likely_state_plot(disc_states, avg_trial, ax1d_a, trial_break=trial_break_sliced)
+            most_likely_state_plot(disc_states, avg_trial, ax1d, trial_break=trial_break_sliced)
             ax1d.set_title(f"Most Likely Discrete State\n")
 
         ax1d.set_xlabel("Time (frames)")
@@ -527,7 +592,50 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     fig6.tight_layout(pad=2)
 
     fig6.savefig(output_folder / "superimposedtraj.png")
-            
+
+    for i in range(disc_states):
+        state_key = f"{key}/state{i}"
+
+        if roi:
+            state_output_folder = Path(f"output/{state_key}/{disc_states}states_{latent_dims}dims_roi{roi}")
+        else:
+            state_output_folder = Path(f"output/{state_key}/{disc_states}states_{latent_dims}dims")
+
+        state_output_folder.mkdir(parents=True, exist_ok=True)
+
+        # ---- Eigenvalues Calculations -----
+        eigs, vecs, tc = eigs_timeconstants(rslds_lem, i) # select state you want to extract dynamics matrix from. each state has different dynamics matrix.
+
+        # EIGENSPECTRUM
+        real = eigs.real
+        imag = eigs.imag
+        fig4, ax4 = plt.subplots(figsize=(6,6))
+        ax4.scatter(real, imag)
+        ax4.grid()
+        ax4.set_title(f"Eigenvalues from Dynamics Matrix of State {i}: \n{state_key}")
+        ax4.set_xlabel("Real Axis")
+        ax4.set_ylabel("Imaginary Axis")
+        fig4.tight_layout(pad=2)
+
+        fig4.savefig(state_output_folder / "eigenspectrum.png")
+
+        # TIMECONSTANTS
+        labels = eigs.astype(str)
+        fig5, ax5 = plt.subplots(figsize=(6,6))
+        bars = ax5.bar(labels, tc)
+        ax5.set_xticks([])
+        ax5.bar_label(bars, padding=3)
+        ax5.set_title(f'Bar Plot of Time Constants, State {i}: \n{state_key}')
+        ax5.set_ylabel('Milliseconds') # need to check this
+        fig5.tight_layout(pad=2)
+
+        fig5.savefig(state_output_folder / "timeconstants.png")
+
+        # SINGLE NEURON CONTRIBUTION
+        fig7 = single_neuron_contribution(state_idx=i, model=rslds_lem)
+        # fig7.suptitle(f"Single Neuron Contributions of ROI {roi}: {key}")
+        fig7.savefig(state_output_folder / "single_neuron_contribution.png") 
+     
 
     print(f"\nSAVED: plots at path {output_folder}\n")
     print("----------------------------------------------------------------------------------------------------\n")
@@ -536,16 +644,17 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     if plot:
         plt.show()
 
-    save = Path(f"{output_folder}/rslds_lem")
-    save.mkdir(parents=True, exist_ok=True)
+    if save_output:
+        save = Path(f"{output_folder}/rslds_lem")
+        save.mkdir(parents=True, exist_ok=True)
 
-    for i in range(disc_states):
-        A = rslds_lem.dynamics.As # A shape is (num_states, 10, 10)
-        matrix = A[i]
-        np.savetxt(f"{save}/state{i}.csv", matrix, delimiter=",")
+        for i in range(disc_states):
+            A = rslds_lem.dynamics.As # A shape is (num_states, 10, 10)
+            matrix = A[i]
+            np.savetxt(f"{save}/state{i}.csv", matrix, delimiter=",")
 
-    C = abs(np.squeeze(rslds_lem.emissions.Cs))
-    np.savetxt(f"{save}/emissions.csv", C, delimiter=",")
+        C = abs(np.squeeze(rslds_lem.emissions.Cs))
+        np.savetxt(f"{save}/emissions.csv", C, delimiter=",")
 
     return {
         "rslds_lem": rslds_lem, 
@@ -553,7 +662,8 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         "zhat_lem": zhat_lem, 
         "q_lem": q_lem}
 
-
+"""this is if you want to run state-specific stuff after seeing the output of the general model plots, for example the most likely state plots. but you need to set
+save_output=True on your pipeline call for this to work."""
 def run_rslds_statespecificplots(state_idx: list[int], 
                                  disc_states: int = None,
                                  latent_dims: int = None,
@@ -579,6 +689,8 @@ def run_rslds_statespecificplots(state_idx: list[int],
 
     if trial_selection:
         key = f"{key}/{trial_selection}"
+    else:
+        key = f"{key}/full"
     
     if trial_idx and trial_structure == "single_trial":
         key = f"{key}/trial{trial_idx}"

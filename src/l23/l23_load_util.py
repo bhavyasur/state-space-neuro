@@ -20,12 +20,29 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from utils.utils import mat_to_dict
 
-def load_trialtype_idx_l23(data_path):
-    outer = Path(data_path)
-    calcium = outer / "Ca_imaging_data.mat"
-    c = scipy.io.loadmat(calcium, simplify_cells=True)
-    go = c['Ca_data']['ROI']['GO_trial']
-    nogo = c['Ca_data']['ROI']['NOGO_trial']
+def load_trialtype_idx_l23(data_path, specific_loadtype: Literal["session_concat", None]=None):
+    """can take either a single path or a list of paths to concatenate, for which you need to set specific_loadtype=='session_concat'"""
+    if specific_loadtype == "session_concat":
+        go_list = []
+        nogo_list = []
+        for session in data_path:
+            outer = Path(session)
+            calcium = outer / "Ca_imaging_data.mat"
+            c = scipy.io.loadmat(calcium, simplify_cells=True)
+            go_x = c['Ca_data']['ROI']['GO_trial']
+            go_list.append(go_x)
+            nogo_x = c['Ca_data']['ROI']['NOGO_trial']
+            nogo_list.append(nogo_x) 
+        go = np.concatenate(go_list)
+        nogo = np.concatenate(nogo_list)
+        print("Loaded go and nogo indices for concatenated sessions.\n")
+    
+    else:   
+        outer = Path(data_path)
+        calcium = outer / "Ca_imaging_data.mat"
+        c = scipy.io.loadmat(calcium, simplify_cells=True)
+        go = c['Ca_data']['ROI']['GO_trial']
+        nogo = c['Ca_data']['ROI']['NOGO_trial']
 
     return go, nogo
 
@@ -53,7 +70,10 @@ def load_dfoverf_l23(data_path, layer: Literal["L2", "L3", None] = None):
                 elif ROI_centroid[j, 2] == 3:
                     l3_pertrial.append(pre[i][j, :])
                 else:
-                    raise ValueError("ROI_centroid should only have layers 2 and 3, something may be wrong with data or loading.")
+                    if ROI_centroid[j, 2] == -1:
+                        pass
+                    else:
+                        raise ValueError("Layer should be 2, 3, or -1. Another value was found, please check your data.")
             l2pre.append(np.vstack(l2_pertrial))
             l3pre.append(np.vstack(l3_pertrial))
 
@@ -217,7 +237,7 @@ def trace_sanity_check_l23(full_sess, random_seed=None):
         rng = np.random.default_rng()
         randint = rng.integers(0,1000)
     
-    len_slice = 15
+    len_slice = min(num_neurons, 15)
     sliced = full_sess[0:len_slice, randint:randint+1000]
 
     fig, axes = plt.subplots(nrows=len_slice, ncols=1, figsize=(8, 8), sharex=True)
@@ -246,7 +266,7 @@ def load_trialbreak_l23(raw_data):
 
 
 # take the non-trial-sliced version for this
-def behavioral_plot_l23(trial_break, l23_type, ax=None, trial_structure: Literal["single_trial", None] = None, trial_idx=None):
+def behavioral_plot_l23(trial_break, l23_type, ax=None, trial_structure: Literal["single_trial", "full_sess", None] = None, trial_idx=None):
     """ FOR L23: 
         Exact time of piston 1.67 seconds until 2.8 seconds after piston start: So your online frames will be frame number (1.67 until 2.78)*frame rate
         Offline is anything beyond 8 seconds after beginning of trial.
@@ -267,6 +287,9 @@ def behavioral_plot_l23(trial_break, l23_type, ax=None, trial_structure: Literal
         if not trial_idx:
             raise ValueError("trial_idx must be set to use trial_structure='single_trial'")
         my_trial_length = trial_break[trial_idx]
+
+    elif trial_structure == "full_sess":
+        my_trial_length = int(np.sum(trial_break))
 
     else:
         min = np.min(trial_break)
@@ -290,13 +313,118 @@ def behavioral_plot_l23(trial_break, l23_type, ax=None, trial_structure: Literal
 
     return ax
 
+
+def concat_sessions_l23(list_fulls):
+    """INPUT: takes in a list of full sessions (each is (num_neurons, num_timesteps)) and concatenates them based on condition type. Returns a concatenated full session that represents multiple sessions concatenated, 2D array."""
+
+    # NOTE: this is used BEFORE pipeline and output is used as input to the pipeline if type=='session_concat' in pipeline instantiation.
+
+    num_sessions = len(list_fulls)
+    num_neurons = np.shape(list_fulls[0])[0]
+    
+    sum_timebins = sum(np.shape(list_fulls[i])[1] for i in range(num_sessions))
+
+    full_sess = np.zeros((num_neurons, sum_timebins))
+
+    for i in range(num_neurons):
+        time_now = 0
+        for j in range(num_sessions):
+            x = list_fulls[j][i, :]
+            num_timebins_this_session = np.shape(list_fulls[j])[1]
+            full_sess[i, time_now : num_timebins_this_session+time_now] = x
+            time_now += num_timebins_this_session
+        
+    return full_sess
+
+def session_concat_pipeline_l23(list_of_folder_paths, trial_selection: Literal["go", "nogo", None] = None, layer: Literal["L2", "L3", None] = None):
+    """pipeline to concatenate sessions from raw data. takes in list of date strings, returns concatenated session.
+    condition_dates will be the input to 'dates' in run_rslds_pipeline"""
+
+    num_sessions = len(list_of_folder_paths)
+    list_full = []
+    list_go = []
+    list_nogo = []
+    list_breaksliced = []
+    for session in list_of_folder_paths:
+        dfoverf = load_dfoverf_l23(session, layer=layer)
+        go_idx, nogo_idx = load_trialtype_idx_l23(session)
+        single_session, tb_sliced = full_session_trialsliced_l23(dfoverf)
+        single_session_go = gonogotrials_sliced_l23(dfoverf, go_idx)
+        single_session_nogo = gonogotrials_sliced_l23(dfoverf, nogo_idx)
+        list_breaksliced.append(tb_sliced)
+        list_full.append(single_session)
+        list_go.append(single_session_go)  
+        list_nogo.append(single_session_nogo)  
+
+    trial_break_sliced_concat = np.concatenate(list_breaksliced, axis=0)
+
+    if trial_selection == "go":
+        concat_condition = concat_sessions_l23(list_go)
+        print(f"Concatenating go trials from {num_sessions} sessions.\n")
+    elif trial_selection == "nogo":
+        concat_condition = concat_sessions_l23(list_nogo)
+        print(f"Concatenating nogo trials from {num_sessions} sessions.\n")
+    else:
+        concat_condition = concat_sessions_l23(list_full)
+        print(f"Concatenating all trials from {num_sessions} sessions.\n")    
+
+    return concat_condition, trial_break_sliced_concat # this is the equivalent of full
+
+
+
+def keep_untracked(path1, path2):
+    """returns a numpy array of the cells that are in path1 but are not in path2. this is specifically to check the significance of the cells tracked vs untracked cells in shivam's dataset"""
+
+    dfoverf1 = load_dfoverf_l23(path1) # LARGER ARRAY
+    dfoverf2 = load_dfoverf_l23(path2) # TRACKED ARRAY
+    trial_break1 = load_trialbreak_l23(path1)
+    mid = int(trial_break1[0]) / 2
+    start = mid - 5
+    end = mid + 5
+
+    full1 = full_session_l23(dfoverf1)
+    print("full1 shape", np.shape(full1))
+    full2 = full_session_l23(dfoverf2)
+    print("full2 shape", np.shape(full2))
+
+    all_idx = np.arange(np.shape(full1)[0])
+    print("all idx", np.shape(all_idx))
+    aligned_idx_list = []
+
+    for i in range(np.shape(full2)[0]):
+        row2 = full2[i,:]
+        for j in range(np.shape(full1)[0]):
+            row1 = full1[j,:]
+            if np.allclose(row1, row2):
+                aligned_idx_list.append(j)
+                break
+
+    aligned_idx = np.array(aligned_idx_list)
+
+    print("aligned shape", np.shape(aligned_idx))
+    
+    not_aligned_idx_list = np.setdiff1d(all_idx, aligned_idx)
+
+    print("not aligned", np.shape(not_aligned_idx_list))
+
+    save = []
+    for idx in not_aligned_idx_list:
+        row = full1[idx,:]
+        save.append(row)
+
+    full_untracked = np.vstack(save)
+
+    return full_untracked
+
     
 # ---------- running things but ignore for now
 
 if __name__ == "__main__":
 
-    folder_path = "data/shivam/Bessel_140_250/1348DR/Expert/GO"
+    p1 = "data/shivam/Bessel_140_250/1348DR/Expert/GO"
 
-    go, nogo = load_trialtype_idx_l23(folder_path)
-    print("go", go)
-    print("nogo", nogo)
+    p2 = "data/shivam/Bessel_140_250/1348DR/Naive_to_expert/Operant/In"
+
+    full_unt = keep_untracked(p1, p2)
+
+    print(np.shape(full_unt))

@@ -297,7 +297,7 @@ def full_session_trialsliced_thresholded_dendrite(dfoverf):
     return full_sess_thresholded
 
 
-def behavioral_plot_dendrite(raw_data, session_date, trial_break, path_type: Literal["sliceTCA", None] = None, ax=None, trial_structure: Literal["single_trial", "trial_averaged", None] = None, trial_idx=None):
+def behavioral_plot_dendrite(raw_data, session_date, trial_break, path_type: Literal["sliceTCA", None] = None, ax=None, trial_structure: Literal["single_trial",  None] = None, trial_idx=None):
     """ should load in trial_break_sliced since the trials have 5% cut off beginning and end"""
     
     outer = Path(raw_data)
@@ -324,12 +324,9 @@ def behavioral_plot_dendrite(raw_data, session_date, trial_break, path_type: Lit
             raise ValueError("trial_idx must be set to use trial_structure='single_trial'")
         my_trial_length = trial_break[trial_idx]
 
-    elif trial_structure == "trial_averaged":
+    else:
         min = np.min(trial_break)
         my_trial_length = min        
-
-    else:
-        raise ValueError("should be 'single_trial' or 'trial_averaged'")
 
     one_s = [0]
     one_e = [piston_1]
