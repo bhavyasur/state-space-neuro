@@ -378,9 +378,10 @@ def keep_untracked(path1, path2):
     dfoverf1 = load_dfoverf_l23(path1) # LARGER ARRAY
     dfoverf2 = load_dfoverf_l23(path2) # TRACKED ARRAY
     trial_break1 = load_trialbreak_l23(path1)
-    mid = int(trial_break1[0]) / 2
-    start = mid - 5
-    end = mid + 5
+    mid = int(int(trial_break1[0]) / 2)
+    print("mid", mid)
+    start = mid - 2
+    end = mid + 2
 
     full1 = full_session_l23(dfoverf1)
     print("full1 shape", np.shape(full1))
@@ -392,9 +393,9 @@ def keep_untracked(path1, path2):
     aligned_idx_list = []
 
     for i in range(np.shape(full2)[0]):
-        row2 = full2[i,:]
+        row2 = full2[i,start:end]
         for j in range(np.shape(full1)[0]):
-            row1 = full1[j,:]
+            row1 = full1[j,start:end]
             if np.allclose(row1, row2):
                 aligned_idx_list.append(j)
                 break
