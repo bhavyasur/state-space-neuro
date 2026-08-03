@@ -22,6 +22,7 @@ from src.gcamp8.gcamp8_load_util import ( load_dfoverf_dendrite, full_session_de
                                          full_session_trialsliced_dendrite, full_session_trialsliced_thresholded_dendrite, load_dfoverf_problemtest,
                                          trace_sanity_check_dendrite, session_concat_pipeline, spikes_smooth, load_trialbreak_dendrite, 
                                          gonogotrials_sliced_dendrite, load_trialtype_idx_dendrite, behavioral_plot_dendrite )
+from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2)
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
                                   softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, full_go_nogo )
@@ -63,6 +64,7 @@ class DataType(Enum):
     RbpCre = "rbpcre"
     L23 = "l23"
     GCaMP8 = "gcamp8"
+    M2 = "m2"
 
 # ----------------------------- rSLDS MAIN FUNCTION -----------------------------
 
@@ -95,7 +97,7 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         - trial_selection, roi, date, depend on the datatype. 
             - L23, RbpCre, GCaMP8 use trial_selection differently. 
             - roi is only for RbpCre (so far)
-            - date is only for GCaMP8, and can either be a single date or a list of dates depending on your input to trial_selection. 
+            - date is only for GCaMP8 and M2, and can either be a single date or a list of dates depending on your input to trial_selection. 
               will be used differently depending.
         - state_idx is for plotting. choose a single discrete state for eigendecomposition of A matrix. this will likely depend on your analysis / if 
           a certain state corresponds to a certain behavior.
@@ -107,6 +109,13 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         spks = load_spikes(raw_data)
         full = full_session(spks)
         data = bin_smooth(full.T).astype(int)
+    
+    elif type is DataType.M2:
+        sigd = load_sigd_m2(raw_data, date=date)
+        data = sigd.T.astype(int)
+        for_trace = sigd
+        print(f"Loaded M2 data for date {date}.\n")
+        print("Running on full session.\n")
 
     elif type is DataType.RbpCre:
         go_idx, nogo_idx = load_trialtype_idx_rbp(raw_data, path_type=path_type, roi=roi)
@@ -222,6 +231,11 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
                         emissions="poisson_orthog",
                         emission_kwargs=dict(link="softplus"))
         print(f"Instantiating model using Poisson Orthogonal emissions type.\n")
+    elif type is DataType.M2:
+        rslds = ssm.SLDS(num_obs, disc_states, latent_dims,
+                        transitions="recurrent_only",
+                        emissions="gaussian_orthog")        
+        print(f"Instantiating model using Gaussian Orthogonal emissions type.\n")
     elif type is DataType.RbpCre:
         rslds = ssm.SLDS(num_obs, disc_states, latent_dims,
                         transitions="recurrent_only",
@@ -305,6 +319,11 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax0.set_title(f"Spike Raster Plot: {key}")
         fig0.tight_layout(pad=2)
         fig0.savefig(output_folder / "spikes.png")
+    elif type is DataType.M2:
+        fig0, ax0 = plt.subplots(figsize=(7,5))
+        trace_sanity_check_m2(for_trace)
+        fig0.suptitle(f"Calcium Trace of Neurons: {key}")  
+        fig0.savefig(output_folder / "calcium_trace.png")
 
     elif type is DataType.RbpCre:
         fig0, axes0 = trace_sanity_check(for_trace, random_seed=42)
