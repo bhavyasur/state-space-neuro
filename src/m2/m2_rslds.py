@@ -22,6 +22,6 @@ if __name__=="__main__":
     interm_1357 = "0605"
     expert_1357 = "0626"
 
-    run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date="naive_1357", num_iters=50)
-    run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date="interm_1357", num_iters=50)
-    run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date="expert_1357", num_iters=50)
+    run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=naive_1357, num_iters=50)
+    run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=interm_1357, num_iters=50)
+    run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=expert_1357, num_iters=50)

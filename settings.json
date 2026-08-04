@@ -1,0 +1,10 @@
+{
+
+"terminal.integrated.env.windows": {
+    "PATH": "C:\\Users\\bsurapan\\.local\\bin"
+},
+
+"terminal.integrated.defaultProfile.windows": "PowerShell"
+
+}
+

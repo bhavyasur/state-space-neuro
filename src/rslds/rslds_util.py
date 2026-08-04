@@ -411,7 +411,7 @@ def single_neuron_contribution(state_idx, model=None, As=None, Cs=None, model_ty
 
     return fig
 
-def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break, trial_structure: Literal["single_trial", "full_sess", None] = None, trial_idx: int = None):
+def most_likely_state_plot(disc_states, zhat_lem, ax, trial_break = None, trial_structure: Literal["single_trial", "full_sess", None] = None, trial_idx: int = None):
 
     if trial_structure == "single_trial":
         start, end = select_trial_from_trial_break(trial_break, trial_idx)

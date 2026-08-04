@@ -51,11 +51,26 @@ def load_sigd_m2(data_path, date: str):
     """returns an array of (num_neurons x num_timesteps) of the full session"""
 
     calcium = Path(data_path)
-    c = scipy.io.loadmat(calcium, simplify_cells=True)
+    c = mat73.loadmat(calcium)
     pre = c['NeuronByDay'][f'D{date}']['SigD']
     dfoverf = pre
    
     return dfoverf
+    print("shape of dfoverf", np.shape(dfoverf))
+
+def bin_sigd_m2(dfoverf, bin_size: int):
+    """INPUT: dfoverf is a 2D array of (num_neurons, num_timesteps). bin_size is the number of timebins to average over. OUTPUT: binned_dfoverf is a 2D array of (num_neurons, num_timesteps/bin_size)"""
+    num_neurons = np.shape(dfoverf)[0]
+    num_timesteps = np.shape(dfoverf)[1]
+    num_bins = int(num_timesteps/bin_size)
+    binned_dfoverf = np.zeros((num_neurons, num_bins))
+    for i in range(num_neurons):
+        for j in range(num_bins):
+            start = j*bin_size
+            end = (j+1)*bin_size
+            binned_dfoverf[i,j] = np.mean(dfoverf[i,start:end])
+    
+    return binned_dfoverf
 
 def gonogotrials_sliced_l23(dfoverf, gonogo):
     """
@@ -118,15 +133,15 @@ def gonogotrials_sliced_l23(dfoverf, gonogo):
 
 
 
-def trace_sanity_check_m2(sigd):
+def trace_sanity_check_m2(binned):
     """this function visualizes a trace of all the neurons for a random set of 100 time steps so you can sanity check that the neurons activity is correct."""
-    num_neurons = np.shape(full_sess)[0]
+    num_neurons = np.shape(binned)[0]
   
     rng = np.random.default_rng()
     randint = rng.integers(0,1000)
     
     len_slice = min(num_neurons, 15)
-    sliced = full_sess[0:len_slice, randint:randint+1000]
+    sliced = binned[0:len_slice, randint:randint+1000]
 
     fig, axes = plt.subplots(nrows=len_slice, ncols=1, figsize=(8, 8), sharex=True)
 
@@ -135,7 +150,7 @@ def trace_sanity_check_m2(sigd):
         axes[i].set_ylabel(f"Neuron {i+1}", fontsize=7, rotation=90)
         axes[i].grid(True, alpha=0.3)
 
-    for ax in axes.flat:
+    for ax in axes.flat:        
         for spine in ax.spines.values():
             spine.set_linewidth(0.75)
 
@@ -151,6 +166,9 @@ def load_trialbreak_l23(raw_data):
 
     return np.asarray(trial_break)
     
+
+def plot_zhatlem_indivtrials(zhat_lem):
+
 
 
 # take the non-trial-sliced version for this
@@ -202,108 +220,108 @@ def load_trialbreak_l23(raw_data):
 #     return ax
 
 
-def concat_sessions_l23(list_fulls):
-    """INPUT: takes in a list of full sessions (each is (num_neurons, num_timesteps)) and concatenates them based on condition type. Returns a concatenated full session that represents multiple sessions concatenated, 2D array."""
+# def concat_sessions_l23(list_fulls):
+#     """INPUT: takes in a list of full sessions (each is (num_neurons, num_timesteps)) and concatenates them based on condition type. Returns a concatenated full session that represents multiple sessions concatenated, 2D array."""
 
-    # NOTE: this is used BEFORE pipeline and output is used as input to the pipeline if type=='session_concat' in pipeline instantiation.
+#     # NOTE: this is used BEFORE pipeline and output is used as input to the pipeline if type=='session_concat' in pipeline instantiation.
 
-    num_sessions = len(list_fulls)
-    num_neurons = np.shape(list_fulls[0])[0]
+#     num_sessions = len(list_fulls)
+#     num_neurons = np.shape(list_fulls[0])[0]
     
-    sum_timebins = sum(np.shape(list_fulls[i])[1] for i in range(num_sessions))
+#     sum_timebins = sum(np.shape(list_fulls[i])[1] for i in range(num_sessions))
 
-    full_sess = np.zeros((num_neurons, sum_timebins))
+#     full_sess = np.zeros((num_neurons, sum_timebins))
 
-    for i in range(num_neurons):
-        time_now = 0
-        for j in range(num_sessions):
-            x = list_fulls[j][i, :]
-            num_timebins_this_session = np.shape(list_fulls[j])[1]
-            full_sess[i, time_now : num_timebins_this_session+time_now] = x
-            time_now += num_timebins_this_session
+#     for i in range(num_neurons):
+#         time_now = 0
+#         for j in range(num_sessions):
+#             x = list_fulls[j][i, :]
+#             num_timebins_this_session = np.shape(list_fulls[j])[1]
+#             full_sess[i, time_now : num_timebins_this_session+time_now] = x
+#             time_now += num_timebins_this_session
         
-    return full_sess
+#     return full_sess
 
-def session_concat_pipeline_l23(list_of_folder_paths, trial_selection: Literal["go", "nogo", None] = None, layer: Literal["L2", "L3", None] = None):
-    """pipeline to concatenate sessions from raw data. takes in list of date strings, returns concatenated session.
-    condition_dates will be the input to 'dates' in run_rslds_pipeline"""
+# def session_concat_pipeline_l23(list_of_folder_paths, trial_selection: Literal["go", "nogo", None] = None, layer: Literal["L2", "L3", None] = None):
+#     """pipeline to concatenate sessions from raw data. takes in list of date strings, returns concatenated session.
+#     condition_dates will be the input to 'dates' in run_rslds_pipeline"""
 
-    num_sessions = len(list_of_folder_paths)
-    list_full = []
-    list_go = []
-    list_nogo = []
-    list_breaksliced = []
-    for session in list_of_folder_paths:
-        dfoverf = load_dfoverf_l23(session, layer=layer)
-        go_idx, nogo_idx = load_trialtype_idx_l23(session)
-        single_session, tb_sliced = full_session_trialsliced_l23(dfoverf)
-        single_session_go = gonogotrials_sliced_l23(dfoverf, go_idx)
-        single_session_nogo = gonogotrials_sliced_l23(dfoverf, nogo_idx)
-        list_breaksliced.append(tb_sliced)
-        list_full.append(single_session)
-        list_go.append(single_session_go)  
-        list_nogo.append(single_session_nogo)  
+#     num_sessions = len(list_of_folder_paths)
+#     list_full = []
+#     list_go = []
+#     list_nogo = []
+#     list_breaksliced = []
+#     for session in list_of_folder_paths:
+#         dfoverf = load_dfoverf_l23(session, layer=layer)
+#         go_idx, nogo_idx = load_trialtype_idx_l23(session)
+#         single_session, tb_sliced = full_session_trialsliced_l23(dfoverf)
+#         single_session_go = gonogotrials_sliced_l23(dfoverf, go_idx)
+#         single_session_nogo = gonogotrials_sliced_l23(dfoverf, nogo_idx)
+#         list_breaksliced.append(tb_sliced)
+#         list_full.append(single_session)
+#         list_go.append(single_session_go)  
+#         list_nogo.append(single_session_nogo)  
 
-    trial_break_sliced_concat = np.concatenate(list_breaksliced, axis=0)
+#     trial_break_sliced_concat = np.concatenate(list_breaksliced, axis=0)
 
-    if trial_selection == "go":
-        concat_condition = concat_sessions_l23(list_go)
-        print(f"Concatenating go trials from {num_sessions} sessions.\n")
-    elif trial_selection == "nogo":
-        concat_condition = concat_sessions_l23(list_nogo)
-        print(f"Concatenating nogo trials from {num_sessions} sessions.\n")
-    else:
-        concat_condition = concat_sessions_l23(list_full)
-        print(f"Concatenating all trials from {num_sessions} sessions.\n")    
+#     if trial_selection == "go":
+#         concat_condition = concat_sessions_l23(list_go)
+#         print(f"Concatenating go trials from {num_sessions} sessions.\n")
+#     elif trial_selection == "nogo":
+#         concat_condition = concat_sessions_l23(list_nogo)
+#         print(f"Concatenating nogo trials from {num_sessions} sessions.\n")
+#     else:
+#         concat_condition = concat_sessions_l23(list_full)
+#         print(f"Concatenating all trials from {num_sessions} sessions.\n")    
 
-    return concat_condition, trial_break_sliced_concat # this is the equivalent of full
+#     return concat_condition, trial_break_sliced_concat # this is the equivalent of full
 
 
 
-def keep_untracked(path1, path2):
-    """returns a numpy array of the cells that are in path1 but are not in path2. this is specifically to check the significance of the cells tracked vs untracked cells in shivam's dataset"""
+# def keep_untracked(path1, path2):
+#     """returns a numpy array of the cells that are in path1 but are not in path2. this is specifically to check the significance of the cells tracked vs untracked cells in shivam's dataset"""
 
-    dfoverf1 = load_dfoverf_l23(path1) # LARGER ARRAY
-    dfoverf2 = load_dfoverf_l23(path2) # TRACKED ARRAY
-    trial_break1 = load_trialbreak_l23(path1)
-    mid = int(int(trial_break1[0]) / 2)
-    print("mid", mid)
-    start = mid - 2
-    end = mid + 2
+#     dfoverf1 = load_dfoverf_l23(path1) # LARGER ARRAY
+#     dfoverf2 = load_dfoverf_l23(path2) # TRACKED ARRAY
+#     trial_break1 = load_trialbreak_l23(path1)
+#     mid = int(int(trial_break1[0]) / 2)
+#     print("mid", mid)
+#     start = mid - 2
+#     end = mid + 2
 
-    full1 = full_session_l23(dfoverf1)
-    print("full1 shape", np.shape(full1))
-    full2 = full_session_l23(dfoverf2)
-    print("full2 shape", np.shape(full2))
+#     full1 = full_session_l23(dfoverf1)
+#     print("full1 shape", np.shape(full1))
+#     full2 = full_session_l23(dfoverf2)
+#     print("full2 shape", np.shape(full2))
 
-    all_idx = np.arange(np.shape(full1)[0])
-    print("all idx", np.shape(all_idx))
-    aligned_idx_list = []
+#     all_idx = np.arange(np.shape(full1)[0])
+#     print("all idx", np.shape(all_idx))
+#     aligned_idx_list = []
 
-    for i in range(np.shape(full2)[0]):
-        row2 = full2[i,start:end]
-        for j in range(np.shape(full1)[0]):
-            row1 = full1[j,start:end]
-            if np.allclose(row1, row2):
-                aligned_idx_list.append(j)
-                break
+#     for i in range(np.shape(full2)[0]):
+#         row2 = full2[i,start:end]
+#         for j in range(np.shape(full1)[0]):
+#             row1 = full1[j,start:end]
+#             if np.allclose(row1, row2):
+#                 aligned_idx_list.append(j)
+#                 break
 
-    aligned_idx = np.array(aligned_idx_list)
+#     aligned_idx = np.array(aligned_idx_list)
 
-    print("aligned shape", np.shape(aligned_idx))
+#     print("aligned shape", np.shape(aligned_idx))
     
-    not_aligned_idx_list = np.setdiff1d(all_idx, aligned_idx)
+#     not_aligned_idx_list = np.setdiff1d(all_idx, aligned_idx)
 
-    print("not aligned", np.shape(not_aligned_idx_list))
+#     print("not aligned", np.shape(not_aligned_idx_list))
 
-    save = []
-    for idx in not_aligned_idx_list:
-        row = full1[idx,:]
-        save.append(row)
+#     save = []
+#     for idx in not_aligned_idx_list:
+#         row = full1[idx,:]
+#         save.append(row)
 
-    full_untracked = np.vstack(save)
+#     full_untracked = np.vstack(save)
 
-    return full_untracked
+#     return full_untracked
 
     
 # ---------- running things but ignore for now
@@ -313,7 +331,5 @@ if __name__ == "__main__":
     p1 = "data/shivam/Bessel_140_250/1348DR/Expert/GO"
 
     p2 = "data/shivam/Bessel_140_250/1348DR/Naive_to_expert/Operant/In"
-
-    full_unt = keep_untracked(p1, p2)
 
     print(np.shape(full_unt))

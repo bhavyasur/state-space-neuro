@@ -22,7 +22,7 @@ from src.gcamp8.gcamp8_load_util import ( load_dfoverf_dendrite, full_session_de
                                          full_session_trialsliced_dendrite, full_session_trialsliced_thresholded_dendrite, load_dfoverf_problemtest,
                                          trace_sanity_check_dendrite, session_concat_pipeline, spikes_smooth, load_trialbreak_dendrite, 
                                          gonogotrials_sliced_dendrite, load_trialtype_idx_dendrite, behavioral_plot_dendrite )
-from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2)
+from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_m2 )
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
                                   softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, full_go_nogo )
@@ -112,8 +112,9 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     
     elif type is DataType.M2:
         sigd = load_sigd_m2(raw_data, date=date)
-        data = sigd.T.astype(int)
-        for_trace = sigd
+        binned = bin_sigd_m2(sigd, bin_size=5)
+        data = binned.T.astype(int)
+        for_trace = binned
         print(f"Loaded M2 data for date {date}.\n")
         print("Running on full session.\n")
 
@@ -320,8 +321,7 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         fig0.tight_layout(pad=2)
         fig0.savefig(output_folder / "spikes.png")
     elif type is DataType.M2:
-        fig0, ax0 = plt.subplots(figsize=(7,5))
-        trace_sanity_check_m2(for_trace)
+        fig0, axes0 = trace_sanity_check_m2(for_trace)
         fig0.suptitle(f"Calcium Trace of Neurons: {key}")  
         fig0.savefig(output_folder / "calcium_trace.png")
 
@@ -395,31 +395,33 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         fig1c.savefig(output_folder / "pc_timeseries.png")
 
     else:
-
-        if trial_selection == "go":
-            avg_trial = trial_average_pc(trial_break_sliced, x_pc_2, trial_selection=trial_selection, gonogo=go_idx)
-        elif trial_selection == "nogo":
-            avg_trial = trial_average_pc(trial_break_sliced, x_pc_2, trial_selection=trial_selection, gonogo=nogo_idx)
+        if type is DataType.M2:
+            pass
         else:
-            avg_trial = trial_average_pc(trial_break_sliced, x_pc_2)
-        
-        length = np.shape(avg_trial)[0]
+            if trial_selection == "go":
+                avg_trial = trial_average_pc(trial_break_sliced, x_pc_2, trial_selection=trial_selection, gonogo=go_idx)
+            elif trial_selection == "nogo":
+                avg_trial = trial_average_pc(trial_break_sliced, x_pc_2, trial_selection=trial_selection, gonogo=nogo_idx)
+            else:
+                avg_trial = trial_average_pc(trial_break_sliced, x_pc_2)
+            
+            length = np.shape(avg_trial)[0]
 
-        fig1c, [ax1c_a, ax1c_b] = plt.subplots(figsize=(10,6), nrows=2, ncols=1)
-        ax1c_a.plot(avg_trial[:, 0], color='xkcd:windows blue', linewidth=1.5)
-        ax1c_a.set_title(f"PC1 over Time, Trial Averaged: \n{key}")
-        ax1c_a.set_xlabel("Time")
-        ax1c_a.set_ylabel("PC1 Value")
-        ax1c_a.set_xlim(0, length)
+            fig1c, [ax1c_a, ax1c_b] = plt.subplots(figsize=(10,6), nrows=2, ncols=1)
+            ax1c_a.plot(avg_trial[:, 0], color='xkcd:windows blue', linewidth=1.5)
+            ax1c_a.set_title(f"PC1 over Time, Trial Averaged: \n{key}")
+            ax1c_a.set_xlabel("Time")
+            ax1c_a.set_ylabel("PC1 Value")
+            ax1c_a.set_xlim(0, length)
 
-        ax1c_b.plot(avg_trial[:, 1], color='xkcd:red', linewidth=1.5)
-        ax1c_b.set_title(f"PC2 over Time, Trial Averaged: \n{key}") 
-        ax1c_b.set_xlabel("Time")
-        ax1c_b.set_ylabel("PC2 Value")
-        ax1c_b.set_xlim(0, length)
+            ax1c_b.plot(avg_trial[:, 1], color='xkcd:red', linewidth=1.5)
+            ax1c_b.set_title(f"PC2 over Time, Trial Averaged: \n{key}") 
+            ax1c_b.set_xlabel("Time")
+            ax1c_b.set_ylabel("PC2 Value")
+            ax1c_b.set_xlim(0, length)
 
-        fig1c.tight_layout(pad=2)
-        fig1c.savefig(output_folder / "pc_timeseries.png")
+            fig1c.tight_layout(pad=2)
+            fig1c.savefig(output_folder / "pc_timeseries.png")
    
     # PLOT OF MOST LIKELY DISCRETE STATE OVER TIME
     
@@ -553,6 +555,18 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax1d_a.set_xlabel("Time (frames)")
         ax1d_b.set_xlabel("Time (frames)")
         
+        fig1d.tight_layout(pad=2)
+        fig1d.savefig(output_folder / "most_likely_state.png")
+
+    elif type is DataType.M2:
+        fig1d, ax1d = plt.subplots(figsize=(10, 4))
+        full = zhat_lem
+        
+        most_likely_state_plot(disc_states, full, ax1d, trial_structure="full_sess")
+
+        ax1d.set_title(f"Most Likely Discrete State, Full Session: \n{key}")
+        ax1d.set_xlabel("Time (frames)")
+                
         fig1d.tight_layout(pad=2)
         fig1d.savefig(output_folder / "most_likely_state.png")
 
