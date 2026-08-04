@@ -634,3 +634,119 @@ def full_go_nogo(trial_break, zhat_lem, trial_selection: Literal["go", "nogo", N
         
         arr = np.concatenate(zhat_trial_list)
         return arr
+
+def get_all_eigs(model, disc_states, state_idx: int=None, single_state: bool = False):
+    A = model.dynamics.As # A shape is (num_states, 10, 10)
+    if single_state:
+        matrix = A[state_idx]
+        tuple = np.linalg.eig(matrix)
+        eigenvalues = tuple.eigenvalues
+        return eigenvalues
+    else:
+        eigs_list_allstates = []
+        for i in range(disc_states):
+            matrix = A[i]
+            tuple = np.linalg.eig(matrix)
+            eigenvalues = tuple.eigenvalues
+            eigs_list_allstates.append(eigenvalues)
+        return eigs_list_allstates
+
+def get_spiral_score(eigenvalues_allstates, disc_states, state_idx: int = None, single_state: bool = False, alpha=1.0):
+    if single_state:
+        eigenvalues = eigenvalues_allstates
+        lam = eigenvalues
+        lam_abs = np.abs(lam)              # |lambda|
+        lam_im_abs = np.abs(lam.imag)      # |Im(lambda)|
+        growth_weight = np.exp(-alpha * (lam_abs - 1.0)**2)
+        spiral_mode_score = growth_weight * (lam_im_abs / (lam_abs))
+        return spiral_mode_score
+    else:
+        spiral_mode_scores = []
+        for i in range(disc_states):
+            eigenvalues = eigenvalues_allstates[i]
+            lam = eigenvalues
+            lam_abs = np.abs(lam)              # |lambda|
+            lam_im_abs = np.abs(lam.imag)      # |Im(lambda)|
+            growth_weight = np.exp(-alpha * (lam_abs - 1.0)**2)
+            spiral_mode_score = growth_weight * (lam_im_abs / (lam_abs))
+            spiral_mode_scores.append(spiral_mode_score)
+        return spiral_mode_scores
+
+
+# PLOT FOR PROBABILITY OF STATES
+def state_probability_plot(trial_break, zhat_lem, disc_states, trial_selection: Literal["go", "nogo", None] = None, gonogo=None, ax=None):
+    min = int(np.min(trial_break)) # should return the minimum trial length
+
+    if trial_selection == "go" or trial_selection == "nogo":
+        zhat_trial_list = []
+
+        gonogo_trial_break = []
+        for i in range(len(gonogo)):
+            idx = gonogo[i]
+            length = trial_break[idx-1]
+            gonogo_trial_break.append(length)
+
+        time_now = int(0)
+        for i in range(len(gonogo_trial_break)):
+            len_trial = int(gonogo_trial_break[i])
+            trial_zhat = zhat_lem[time_now:(time_now + len_trial)]
+            zhat_trial_list.append(trial_zhat)
+            time_now += len_trial
+
+        if len(zhat_trial_list) != len(gonogo_trial_break):
+            raise ValueError("trial list does not contain the correct number of trials")
+
+        truncated_list = []
+        for trial in zhat_trial_list:
+            retain = trial[0:min]
+            truncated_list.append(retain)
+
+        print("len truncated list", len(truncated_list))
+        print("shape of first item trunc", np.shape(truncated_list[0]))
+        print("shape of last item trunc", np.shape(truncated_list[-1]))
+
+        if len(truncated_list) != len(gonogo_trial_break):
+            raise ValueError("truncated trial list does not contain the correct number of trials")
+        
+        stack = np.stack(truncated_list, axis=0)
+        new_arr = np.zeros((disc_states, np.shape(stack)[1]))
+        for i in range(np.shape(stack)[0]):
+            col = list(stack[:,i])
+            counts = np.sum(col == np.arange(disc_states)[:, None], axis=1)
+            for j in range(disc_states):
+                jcount = col.count(j)
+                jprob = float(jcount / len(col))
+                new_arr[j, i] = jprob
+    
+    else:
+        zhat_trial_list = []
+
+        time_now = int(0)
+        for i in range(len(trial_break)):
+            len_trial = int(trial_break[i])
+            trial_zhat = zhat_lem[time_now:(time_now + len_trial)]
+            zhat_trial_list.append(trial_zhat)
+            time_now += len_trial
+
+        if len(zhat_trial_list) != len(trial_break):
+            raise ValueError("trial list does not contain the correct number of trials")
+
+        truncated_list = []
+        for trial in zhat_trial_list:
+            retain = trial[0:min]
+            truncated_list.append(retain)
+
+        if len(truncated_list) != len(trial_break):
+            raise ValueError("truncated trial list does not contain the correct number of trials")
+        
+        stack = np.stack(truncated_list, axis=0)
+        new_arr = np.zeros((disc_states, np.shape(stack)[1]))
+        for i in range(np.shape(stack)[0]):
+            col = list(stack[:,i])
+            for j in range(disc_states):
+                jcount = col.count(j)
+                jprob = float(jcount / len(col))
+                new_arr[j, i] = jprob
+
+    ax.plot(new_arr.T, color=colors[0 % len(colors)], linewidth=1.5)
+    return ax

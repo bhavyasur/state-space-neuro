@@ -230,26 +230,26 @@ def trace_sanity_check_l23(full_sess, random_seed=None):
     """this function visualizes a trace of all the neurons for a random set of 100 time steps so you can sanity check that the neurons activity is correct."""
     num_neurons = np.shape(full_sess)[0]
     
-    if random_seed:
-        rng = np.random.default_rng(seed=random_seed)
-        randint = rng.integers(0,1000)
-    else:
-        rng = np.random.default_rng()
-        randint = rng.integers(0,1000)
+    # if random_seed:
+    #     rng = np.random.default_rng(seed=random_seed)
+    #     randint = rng.integers(0,10000)
+    # else:
+    #     rng = np.random.default_rng()
+    #     randint = rng.integers(0,10000)
     
-    len_slice = min(num_neurons, 15)
-    sliced = full_sess[0:len_slice, randint:randint+1000]
+    len_slice = min(num_neurons, 10)
+    sliced = full_sess[0:len_slice, 5000:10000]
 
-    fig, axes = plt.subplots(nrows=len_slice, ncols=1, figsize=(8, 8), sharex=True)
+    fig, axes = plt.subplots(nrows=len_slice, ncols=1, figsize=(5, 7), sharex=True)
 
     for i in range(len_slice):
-        axes[i].plot(sliced[i, :], lw=1.5)
+        axes[i].plot(sliced[i, :], lw=0.9)
         axes[i].set_ylabel(f"Neuron {i+1}", fontsize=7, rotation=90)
         axes[i].grid(True, alpha=0.3)
 
     for ax in axes.flat:
         for spine in ax.spines.values():
-            spine.set_linewidth(0.75)
+            spine.set_linewidth(0.8)
 
     axes[-1].set_xlabel("Time Index", fontsize = 10)
 

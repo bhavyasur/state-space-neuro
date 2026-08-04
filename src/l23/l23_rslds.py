@@ -27,38 +27,38 @@ if __name__=="__main__":
     plot_in = "Bessel_140_250_1348DR/naive_expert_concat_IN"
     plot_out = "Bessel_140_250_1348DR/naive_expert_concat_OUT"
 
-    # CONCATENATED IN BARREL
+    # # CONCATENATED IN BARREL
 
-    run_rslds_pipeline([naive_in, expert_in], disc_states, latent_dims, plot_key=plot_in, type=DataType.L23, l23_type="bessel", specific_loadtype="session_concat", trial_structure="single_trial", trial_idx=20, num_iters=50)
-    run_rslds_pipeline([naive_in, expert_in], disc_states, latent_dims, plot_key=plot_in, type=DataType.L23, trial_selection="go", l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
-    run_rslds_pipeline([naive_in, expert_in], disc_states, latent_dims, plot_key=plot_in, type=DataType.L23, trial_selection="nogo", l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
-
-
-    # CONCATENATED OUT BARREL
-    run_rslds_pipeline([naive_out, expert_out], disc_states, latent_dims, plot_key=plot_out, type=DataType.L23, l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
-    run_rslds_pipeline([naive_out, expert_out], disc_states, latent_dims, plot_key=plot_out, type=DataType.L23, trial_selection="go", l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
-    run_rslds_pipeline([naive_out, expert_out], disc_states, latent_dims, plot_key=plot_out, type=DataType.L23, trial_selection="nogo", l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
+    # run_rslds_pipeline([naive_in, expert_in], disc_states, latent_dims, plot_key=plot_in, type=DataType.L23, l23_type="bessel", specific_loadtype="session_concat", trial_idx=20, num_iters=50)
+    # run_rslds_pipeline([naive_in, expert_in], disc_states, latent_dims, plot_key=plot_in, type=DataType.L23, trial_selection="go", l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
+    # run_rslds_pipeline([naive_in, expert_in], disc_states, latent_dims, plot_key=plot_in, type=DataType.L23, trial_selection="nogo", l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
 
 
-    # IN BARREL, NAIVE ONLY
-    run_rslds_pipeline(naive_in, disc_states, latent_dims, plot_key=plot_naive_in, type=DataType.L23, l23_type="bessel", num_iters=50)
-    run_rslds_pipeline(naive_in, disc_states, latent_dims, plot_key=plot_naive_in, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
-    run_rslds_pipeline(naive_in, disc_states, latent_dims, plot_key=plot_naive_in, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
+    # # CONCATENATED OUT BARREL
+    # # run_rslds_pipeline([naive_out, expert_out], disc_states, latent_dims, plot_key=plot_out, type=DataType.L23, l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
+    # run_rslds_pipeline([naive_out, expert_out], disc_states, latent_dims, plot_key=plot_out, type=DataType.L23, trial_selection="go", l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
+    # run_rslds_pipeline([naive_out, expert_out], disc_states, latent_dims, plot_key=plot_out, type=DataType.L23, trial_selection="nogo", l23_type="bessel", specific_loadtype="session_concat", num_iters=50)
 
-    # IN BARREL, EXPERT ONLY
-    run_rslds_pipeline(expert_in, disc_states, latent_dims, plot_key=plot_expert_in, type=DataType.L23, l23_type="bessel", num_iters=50)
-    run_rslds_pipeline(expert_in, disc_states, latent_dims, plot_key=plot_expert_in, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
-    run_rslds_pipeline(expert_in, disc_states, latent_dims, plot_key=plot_expert_in, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
 
-    # OUT BARREL, NAIVE ONLY
-    run_rslds_pipeline(naive_out, disc_states, latent_dims, plot_key=plot_naive_out, type=DataType.L23, l23_type="bessel", num_iters=50)
-    run_rslds_pipeline(naive_out, disc_states, latent_dims, plot_key=plot_naive_out, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
-    run_rslds_pipeline(naive_out, disc_states, latent_dims, plot_key=plot_naive_out, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
+    # # IN BARREL, NAIVE ONLY
+    # # run_rslds_pipeline(naive_in, disc_states, latent_dims, plot_key=plot_naive_in, type=DataType.L23, l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(naive_in, disc_states, latent_dims, plot_key=plot_naive_in, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(naive_in, disc_states, latent_dims, plot_key=plot_naive_in, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
 
-    # OUT BARREL, EXPERT ONLY
-    run_rslds_pipeline(expert_out, disc_states, latent_dims, plot_key=plot_expert_out, type=DataType.L23, l23_type="bessel", num_iters=50)
-    run_rslds_pipeline(expert_out, disc_states, latent_dims, plot_key=plot_expert_out, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
-    run_rslds_pipeline(expert_out, disc_states, latent_dims, plot_key=plot_expert_out, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
+    # # IN BARREL, EXPERT ONLY
+    # # run_rslds_pipeline(expert_in, disc_states, latent_dims, plot_key=plot_expert_in, type=DataType.L23, l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(expert_in, disc_states, latent_dims, plot_key=plot_expert_in, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(expert_in, disc_states, latent_dims, plot_key=plot_expert_in, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
+
+    # # OUT BARREL, NAIVE ONLY
+    # # run_rslds_pipeline(naive_out, disc_states, latent_dims, plot_key=plot_naive_out, type=DataType.L23, l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(naive_out, disc_states, latent_dims, plot_key=plot_naive_out, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(naive_out, disc_states, latent_dims, plot_key=plot_naive_out, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
+
+    # # OUT BARREL, EXPERT ONLY
+    # # run_rslds_pipeline(expert_out, disc_states, latent_dims, plot_key=plot_expert_out, type=DataType.L23, l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(expert_out, disc_states, latent_dims, plot_key=plot_expert_out, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(expert_out, disc_states, latent_dims, plot_key=plot_expert_out, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
 
 
 
@@ -102,13 +102,13 @@ if __name__=="__main__":
 
     
     naive_go1 = "data/shivam/Bessel_140_250/1348DR/Naive/GO"
-    plot_naive_go1 = "Bessel_140_250_1348DR/Naive_GO"
+    plot_naive_go1 = "Bessel_140_250_1348DR/Naive_GO/svg"
 
     intermediate_go1 = "data/shivam/Bessel_140_250/1348DR/Intermediate/GO"
-    plot_intermediate_go1 = "Bessel_140_250_1348DR/Intermediate_GO"
+    plot_intermediate_go1 = "Bessel_140_250_1348DR/Intermediate_GO/svg"
 
     expert_go1 = "data/shivam/Bessel_140_250/1348DR/Expert/GO"
-    plot_expert_go1 = "Bessel_140_250_1348DR/Expert_GO"
+    plot_expert_go1 = "Bessel_140_250_1348DR/Expert_GO/svg"
 
     naive_nogo1 = "data/shivam/Bessel_140_250/1348DR/Naive/NOGO"
     plot_naive_nogo1 = "Bessel_140_250_1348DR/Naive_NOGO"
@@ -163,6 +163,27 @@ if __name__=="__main__":
     # print(np.shape(full))
     # cross_val(full, plot_key=plot_naive_go1, dims=[4,5], states=[4,5], type=DataType.L23)
 
+
+    # ORIGINALS, GO BARREL
+    run_rslds_pipeline(naive_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_naive_go1, type=DataType.L23, l23_type="bessel", num_iters=5)
+    # run_rslds_pipeline(intermediate_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_intermediate_go1, type=DataType.L23, l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, l23_type="bessel", num_iters=50)
+
+    # run_rslds_pipeline(naive_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_naive_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=5)
+    # run_rslds_pipeline(intermediate_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_intermediate_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", num_iters=50)
+
+    # run_rslds_pipeline(naive_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_naive_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=5)
+    # run_rslds_pipeline(intermediate_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_intermediate_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", num_iters=50)
+
+
+
+
+
+
+
+
     # run_rslds_pipeline(naive_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_naive_go1, type=DataType.L23, l23_type="bessel", layer="L2", num_iters=50)
     # run_rslds_pipeline(naive_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_naive_go1, type=DataType.L23, l23_type="bessel", layer="L3", num_iters=50)
     # run_rslds_pipeline(naive_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_naive_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", layer="L2", num_iters=50)
@@ -177,8 +198,8 @@ if __name__=="__main__":
     # run_rslds_pipeline(intermediate_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_intermediate_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", layer="L2", num_iters=50)
     # run_rslds_pipeline(intermediate_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_intermediate_go1,  type=DataType.L23, trial_selection="nogo", l23_type="bessel", layer="L3", num_iters=50)
 
-    # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, l23_type="bessel", layer="L2", num_iters=50)
-    # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, l23_type="bessel", layer="L3", num_iters=50)
+    # # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, l23_type="bessel", layer="L2", num_iters=50)
+    # # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, l23_type="bessel", layer="L3", num_iters=50)
     # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", layer="L2", num_iters=50)
     # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", layer="L3", num_iters=50)
     # run_rslds_pipeline(expert_go1, disc_states=disc_states, latent_dims=latent_dims, plot_key=plot_expert_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", layer="L2", num_iters=50)
