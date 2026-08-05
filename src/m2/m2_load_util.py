@@ -10,13 +10,23 @@ import numpy as np
 import sys
 from pathlib import Path
 import mat73
+import logging
 import matplotlib.pyplot as plt
 import pandas as pd
 import quantities as pq
 import zipfile
 from typing import Literal
+import pandas as pd
+import matlab.engine
+
+import seaborn as sns
+color_names = ["windows blue", "red", "amber", "faded green"]
+colors = sns.xkcd_palette(color_names)
+sns.set_style("white")
+sns.set_context("talk")
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
+
 
 from utils.utils import mat_to_dict
 
@@ -46,91 +56,101 @@ from utils.utils import mat_to_dict
 
 #     return go, nogo
 
-def load_sigd_m2(data_path, date: str):
-    """DATA_PATH is the mat file !!!!"""
-    """returns an array of (num_neurons x num_timesteps) of the full session"""
 
-    calcium = Path(data_path)
-    c = mat73.loadmat(calcium)
-    pre = c['NeuronByDay'][f'D{date}']['SigD']
-    dfoverf = pre
-   
-    return dfoverf
-    print("shape of dfoverf", np.shape(dfoverf))
-
-def bin_sigd_m2(dfoverf, bin_size: int):
-    """INPUT: dfoverf is a 2D array of (num_neurons, num_timesteps). bin_size is the number of timebins to average over. OUTPUT: binned_dfoverf is a 2D array of (num_neurons, num_timesteps/bin_size)"""
-    num_neurons = np.shape(dfoverf)[0]
-    num_timesteps = np.shape(dfoverf)[1]
+def bin_sigd_m2(sigd, bin_size: int):
+    """INPUT: sigd is a 2D array of (num_neurons, num_timesteps). bin_size is the number of timebins to average over. OUTPUT: binned_sigd is a 2D array of (num_neurons, num_timesteps/bin_size)"""
+    num_neurons = np.shape(sigd)[0]
+    num_timesteps = np.shape(sigd)[1]
     num_bins = int(num_timesteps/bin_size)
-    binned_dfoverf = np.zeros((num_neurons, num_bins))
+    binned_sigd = np.zeros((num_neurons, num_bins))
     for i in range(num_neurons):
         for j in range(num_bins):
             start = j*bin_size
             end = (j+1)*bin_size
-            binned_dfoverf[i,j] = np.mean(dfoverf[i,start:end])
+            binned_sigd[i,j] = np.mean(sigd[i,start:end])
     
-    return binned_dfoverf
+    return binned_sigd
 
-def gonogotrials_sliced_l23(dfoverf, gonogo):
+def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None] = None, m2_correct_only=False):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
             gonogo is a 1d array of indices that represent which trials are go trials or nogo trials.
     OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
             represented in one row for each neuron.
     """
-    num_neurons = np.shape(dfoverf[0])[0]
+    # LOAD SIGD
+    calcium = Path(data_path)
+    
+    logging.getLogger().setLevel(logging.CRITICAL)
 
-    # use go trial indices to only select go trials
-    gonogo_trials = []
-    for i in range(len(gonogo)):
-        idx = gonogo[i]
-        trial = dfoverf[idx-1]
-        gonogo_trials.append(trial)
+    c = mat73.loadmat(calcium)
 
-    num_trials = len(gonogo)
+    logging.getLogger().setLevel(logging.WARNING)
 
-    # 1st cut up each trial and turn into a list
+    pre = c['NeuronByDay'][f'D{date}']['SigD']
 
-    all_neurons = []
+    sigd = pre
 
-    for i in range(num_neurons):
-        sliced_list = []
-        time_now = 0
-        for j in range(num_trials):
-            trial_row_single_neuron = gonogo_trials[j][i, :]
-            # print("trial row shape", np.shape(trial_row_single_neuron))
-            length = np.shape(trial_row_single_neuron)[0]
-            fiveper = int(0.05 * length)
-            # print("fiveper", fiveper)
-            sliced_trial = trial_row_single_neuron[fiveper:(length-fiveper),]
-            # print("sliced trial shape", np.shape(sliced_trial))
-            sliced_list.append(sliced_trial)
-            slice_length = np.shape(sliced_trial)[0]
-            time_now += slice_length
+    # GETTING NECESSARY VARIABLES FROM MAT FILE
+    eng = matlab.engine.start_matlab()
+    
+    eng.load(data_path, nargout=0)
 
-        single_neuron_concat = np.zeros(time_now)
-        # at this point you have an empty array for each neuron that is the length of all the concatenated trials combined.
-        # you also have the sliced_list which is each trial.
+    eng.eval(f"T2 = NeuronByDay.D{date}.S_WM1.T2;", nargout=0)
+    eng.eval("T2_struct = table2struct(T2, 'ToScalar', true);", nargout=0)
 
-        time_iterator = 0
-        for j in range(num_trials):
-            trial = sliced_list[j]
-            slice_trial_length = np.shape(trial)[0]
-            single_neuron_concat[time_iterator:(time_iterator+slice_trial_length),] = trial
-            time_iterator += slice_trial_length
+    S = eng.workspace['T2_struct']
+
+    instructed_turn = list(S['InstructedTurn'])
+    correct = list(S['Correct'])
+
+    eng.eval(f"WM1 = NeuronByDay.D{date}.S_WM1.eventFrameIdx;", nargout=0)
+    eng.eval(f"Return = NeuronByDay.D{date}.S_RETURN.eventFrameIdx;", nargout=0)
+    
+    wm1 = list(eng.workspace['WM1'])
+    ret = list(eng.workspace['Return'])
+
+    # IF: right or left trials only
+    if trial_selection:
+        keep_trial_idx = []
+        if trial_selection == "right":
+            if m2_correct_only:
+                keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 1 and correct[i] == 1]
+            else:
+                keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 1]
+        elif trial_selection == "left":
+            if m2_correct_only:
+                keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 0 and correct[i] == 1]
+            else:
+                keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 0]
+
+        retain = []
+        for i in keep_trial_idx:
+            start = int(wm1[i])
+            end = int(ret[i])
+            retain.append(sigd[:, start:end])
+
+        sliced_sigd = np.hstack(retain, axis=1) # stack the trials along the time axis
+        print('Shape of sliced_sigd:', np.shape(sliced_sigd))
         
-        all_neurons.append(single_neuron_concat)
-        # now for each neuron you have single_neuron_concat which is the row array of all trials for that neuron
+        return sliced_sigd, keep_trial_idx
 
-    #all_neurons at this point should be a list of 1D arrays, of shape (num_neurons, length of all trials)
-    gonogo_length = np.shape(all_neurons)[1]
-    gonogo_sess = np.zeros((num_neurons, gonogo_length))
-    for i in range(num_neurons):
-        gonogo_sess[i, :] = all_neurons[i]
-
-    return gonogo_sess
-
+    # if: FULL TRIAL SET
+    else:
+        if m2_correct_only:
+            correct_trial_idx = [i for i in range(len(correct)) if correct[i] == 1]
+        
+            retain = []
+            for i in correct_trial_idx:
+                start = int(wm1[i])
+                end = int(ret[i])
+                retain.append(sigd[:, start:end])
+        
+            sliced_sigd = np.hstack(retain, axis=1) # stack the trials along the time axis
+            print('Shape of sliced_sigd, correct_only for all trials:', np.shape(sigd))
+            return sliced_sigd, correct_trial_idx
+        else:
+            return sigd, list(range(len(instructed_turn))) # second return value is just a list of all trial indices, since we are not slicing the data
 
 
 def trace_sanity_check_m2(binned):
@@ -158,178 +178,155 @@ def trace_sanity_check_m2(binned):
 
     return fig, axes
 
-def load_trialbreak_l23(raw_data):
-    outer = Path(raw_data)
-    calcium = outer / "Ca_imaging_data.mat"
-    c = scipy.io.loadmat(calcium, simplify_cells=True)
-    trial_break = c['Ca_data']['ROI']['trial_break']
+def load_trialbreak_m2(data_path, date, sliced=False, idx_list: list = None):
+    # you'd want to remove the first two trials, so the first value in trial_break is the value that you should retain the data from, delete everything before that
+    eng = matlab.engine.start_matlab()
 
-    return np.asarray(trial_break)
-    
+    eng.load(data_path, nargout=0)
 
-def plot_zhatlem_indivtrials(zhat_lem):
+    # Assuming the MAT file contains a variable named NeuronByDay
+    eng.eval(f"WM1 = NeuronByDay.D{date}.S_WM1.eventFrameIdx;", nargout=0)
+    eng.eval(f"Gate = NeuronByDay.D{date}.S_GATE.eventFrameIdx;", nargout=0)
+    eng.eval(f"WM2 = NeuronByDay.D{date}.S_WM2.eventFrameIdx;", nargout=0)
+    eng.eval(f"Cue = NeuronByDay.D{date}.S_CUE.eventFrameIdx;", nargout=0)
+    eng.eval(f"Lick = NeuronByDay.D{date}.S_LICK.eventFrameIdx;", nargout=0)
+    eng.eval(f"Return = NeuronByDay.D{date}.S_RETURN.eventFrameIdx;", nargout=0)
 
+    eng.eval(f"T2 = NeuronByDay.D{date}.S_WM1.T2;", nargout=0)
+    eng.eval("T2_struct = table2struct(T2, 'ToScalar', true);", nargout=0)
 
+    S = eng.workspace['T2_struct']
 
-# take the non-trial-sliced version for this
-# def behavioral_plot_l23(trial_break, l23_type, ax=None, trial_structure: Literal["single_trial", "full_sess", None] = None, trial_idx=None):
-#     """ FOR L23: 
-#         Exact time of piston 1.67 seconds until 2.8 seconds after piston start: So your online frames will be frame number (1.67 until 2.78)*frame rate
-#         Offline is anything beyond 8 seconds after beginning of trial.
-#     """
+    print("shape of T2_struct", np.shape(S))
+    print("keys of T2_struct", S.keys())
 
-#     if l23_type == "bessel":
-#         frame_rate = 30.08 # frames per second
-#     elif l23_type == "etl":
-#         frame_rate = 15.01 # frames per second
-#     else:
-#         raise ValueError("type must be 'bessel' or 'etl'")
-    
-#     online_start = 1.67 * frame_rate
-#     online_end = 2.78 * frame_rate
-#     offline_start = 8 * frame_rate
+    if sliced:
+        trialidx = idx_list
+    else:
+        num_trials = len(S['TrialIdx'])
+        trialidx = np.arange(num_trials)
 
-#     if trial_structure == "single_trial":
-#         if not trial_idx:
-#             raise ValueError("trial_idx must be set to use trial_structure='single_trial'")
-#         my_trial_length = trial_break[trial_idx]
+    # store trial times as a list of dicts, each dict has times for Wm1, gate, wm2, cue played, lick, return
+    all_trials = []
+    for i in trialidx:
+        trial_dict = {}
+        trial_dict["WM1"] = eng.workspace['WM1'][i]
+        trial_dict["Gate"] = eng.workspace['Gate'][i]
+        trial_dict["WM2"] = eng.workspace['WM2'][i]
+        trial_dict["CuePlayed"] = eng.workspace['Cue'][i]
+        trial_dict["Lick"] = eng.workspace['Lick'][i]
+        trial_dict["Return"] = eng.workspace['Return'][i]
 
-#     elif trial_structure == "full_sess":
-#         my_trial_length = int(np.sum(trial_break))
+        all_trials.append(trial_dict)
 
-#     else:
-#         min = np.min(trial_break)
-#         my_trial_length = min        
+    return all_trials
 
-#     on_s = [online_start]
-#     on_e = [online_end]
-#     off_s = [offline_start]
-#     off_e = [my_trial_length - 1]
+def find_session_accuracy(data_path, date):
+    calcium = Path(data_path)
 
-#     online_duration = np.subtract(on_e, on_s)
-#     offline_duration = np.subtract(off_e, off_s)
-    
-#     # make gantt chart of online offline for full session
+    logging.getLogger().setLevel(logging.CRITICAL)
 
-#     categories = ["offline", "online"]
-#     ax.set_yticks([0.075, 0.225], categories)
-#     ax.barh(0.225, online_duration, left=on_s, height=0.15, color='green', label="online", alpha=0.5)
-#     ax.barh(0.075, offline_duration, left=off_s, height=0.15, color='red', label="offline", alpha=0.5)
-#     ax.set_xlim(0, my_trial_length-1)
+    c = mat73.loadmat(calcium)
 
-#     return ax
+    logging.getLogger().setLevel(logging.WARNING)
 
+    T2 = c['NeuronByDay'][f'D{date}']['S_WM1']['T2']
+    correct = T2["Correct"]
+    accuracy = np.mean(correct)
+    return accuracy
 
-# def concat_sessions_l23(list_fulls):
-#     """INPUT: takes in a list of full sessions (each is (num_neurons, num_timesteps)) and concatenates them based on condition type. Returns a concatenated full session that represents multiple sessions concatenated, 2D array."""
+def zhat_lem_sliced_plot(zhat_slice, ax, disc_states):
+    diff = np.diff(zhat_slice)
+    timesteps = len(zhat_slice)
+    trial_len = len(zhat_slice)
+    rising_draft = np.where(diff != 0)[0] + 1 # the first index where the new term exists
+    len_r = len(rising_draft)
+    length_bar_draft = np.diff(rising_draft) 
 
-#     # NOTE: this is used BEFORE pipeline and output is used as input to the pipeline if type=='session_concat' in pipeline instantiation.
+    if rising_draft.size == 0:
+        print("zhat_lem does not contain any state changes. this may be correct, but could indicate an error in your data. Please check!")
+        duration = len(zhat_slice)
+        ax.barh(0.075, [duration], left=[0], height=0.15, color=colors[0 % len(colors)], alpha=0.8)
+        ax.set_yticks([0.075], [f"state {zhat_slice[0]}"])
 
-#     num_sessions = len(list_fulls)
-#     num_neurons = np.shape(list_fulls[0])[0]
-    
-#     sum_timebins = sum(np.shape(list_fulls[i])[1] for i in range(num_sessions))
+    else:
+        rising = np.concatenate(([0], rising_draft))
+        length_bar = np.concatenate(([rising_draft[0]], length_bar_draft, [timesteps - rising_draft[len_r-1]]))
 
-#     full_sess = np.zeros((num_neurons, sum_timebins))
+        # to length_bar, prepend the first index of rising
+        tick_list = []
+        states = [f"state {i}" for i in range(disc_states)]
 
-#     for i in range(num_neurons):
-#         time_now = 0
-#         for j in range(num_sessions):
-#             x = list_fulls[j][i, :]
-#             num_timebins_this_session = np.shape(list_fulls[j])[1]
-#             full_sess[i, time_now : num_timebins_this_session+time_now] = x
-#             time_now += num_timebins_this_session
+        for i in range(disc_states):
+            bar_list_per_state = []
+            for j in range(len(rising)):
+                # rising[j] is the time index where the state rises, length_bar[j] is how long it stays high
+                if zhat_slice[rising[j]] == i:
+                    bar_list_per_state.append((rising[j], length_bar[j]))
+            tick = ((i*2)+1)*0.075
+            tick_list.append(tick)
+            ax.barh(tick, [length for _, length in bar_list_per_state], left=[start for start, _ in bar_list_per_state], height=0.15, color=colors[i % len(colors)], alpha=0.8)
         
-#     return full_sess
+        ax.set_yticks(tick_list, states)
 
-# def session_concat_pipeline_l23(list_of_folder_paths, trial_selection: Literal["go", "nogo", None] = None, layer: Literal["L2", "L3", None] = None):
-#     """pipeline to concatenate sessions from raw data. takes in list of date strings, returns concatenated session.
-#     condition_dates will be the input to 'dates' in run_rslds_pipeline"""
+    return ax
 
-#     num_sessions = len(list_of_folder_paths)
-#     list_full = []
-#     list_go = []
-#     list_nogo = []
-#     list_breaksliced = []
-#     for session in list_of_folder_paths:
-#         dfoverf = load_dfoverf_l23(session, layer=layer)
-#         go_idx, nogo_idx = load_trialtype_idx_l23(session)
-#         single_session, tb_sliced = full_session_trialsliced_l23(dfoverf)
-#         single_session_go = gonogotrials_sliced_l23(dfoverf, go_idx)
-#         single_session_nogo = gonogotrials_sliced_l23(dfoverf, nogo_idx)
-#         list_breaksliced.append(tb_sliced)
-#         list_full.append(single_session)
-#         list_go.append(single_session_go)  
-#         list_nogo.append(single_session_nogo)  
-
-#     trial_break_sliced_concat = np.concatenate(list_breaksliced, axis=0)
-
-#     if trial_selection == "go":
-#         concat_condition = concat_sessions_l23(list_go)
-#         print(f"Concatenating go trials from {num_sessions} sessions.\n")
-#     elif trial_selection == "nogo":
-#         concat_condition = concat_sessions_l23(list_nogo)
-#         print(f"Concatenating nogo trials from {num_sessions} sessions.\n")
-#     else:
-#         concat_condition = concat_sessions_l23(list_full)
-#         print(f"Concatenating all trials from {num_sessions} sessions.\n")    
-
-#     return concat_condition, trial_break_sliced_concat # this is the equivalent of full
-
-
-
-# def keep_untracked(path1, path2):
-#     """returns a numpy array of the cells that are in path1 but are not in path2. this is specifically to check the significance of the cells tracked vs untracked cells in shivam's dataset"""
-
-#     dfoverf1 = load_dfoverf_l23(path1) # LARGER ARRAY
-#     dfoverf2 = load_dfoverf_l23(path2) # TRACKED ARRAY
-#     trial_break1 = load_trialbreak_l23(path1)
-#     mid = int(int(trial_break1[0]) / 2)
-#     print("mid", mid)
-#     start = mid - 2
-#     end = mid + 2
-
-#     full1 = full_session_l23(dfoverf1)
-#     print("full1 shape", np.shape(full1))
-#     full2 = full_session_l23(dfoverf2)
-#     print("full2 shape", np.shape(full2))
-
-#     all_idx = np.arange(np.shape(full1)[0])
-#     print("all idx", np.shape(all_idx))
-#     aligned_idx_list = []
-
-#     for i in range(np.shape(full2)[0]):
-#         row2 = full2[i,start:end]
-#         for j in range(np.shape(full1)[0]):
-#             row1 = full1[j,start:end]
-#             if np.allclose(row1, row2):
-#                 aligned_idx_list.append(j)
-#                 break
-
-#     aligned_idx = np.array(aligned_idx_list)
-
-#     print("aligned shape", np.shape(aligned_idx))
+def plot_zhatlem_indivtrials(trial_break, data_path, date, zhat_lem, disc_states, bin_size):
     
-#     not_aligned_idx_list = np.setdiff1d(all_idx, aligned_idx)
+    all_trials = trial_break
 
-#     print("not aligned", np.shape(not_aligned_idx_list))
+    num_trials = len(all_trials)
+    early = num_trials // 3
+    middle = (num_trials * 2) // 3
+    late = num_trials - 1
+    trial_list = [early, middle, late]
 
-#     save = []
-#     for idx in not_aligned_idx_list:
-#         row = full1[idx,:]
-#         save.append(row)
-
-#     full_untracked = np.vstack(save)
-
-#     return full_untracked
-
+    fig, axes = plt.subplots(len(trial_list), 1, figsize=(10, 4*len(trial_list)))
     
-# ---------- running things but ignore for now
+    for trial in trial_list:
+        trial_dict = all_trials[trial-1]
+        wm1 = float(trial_dict["WM1"][0])
+        gate = float(trial_dict["Gate"][0])
+        wm2 = float(trial_dict["WM2"][0])
+        cue = float(trial_dict["CuePlayed"][0])
+        lick = float(trial_dict["Lick"][0])
+        ret = float(trial_dict["Return"][0])
+
+        trial_start = int(wm1) // bin_size
+        trial_end = int(ret) // bin_size
+
+        print("trial_start", trial_start)
+        print("trial_end", trial_end)
+
+        ax = axes[trial_list.index(trial)]
+
+        print("zhat_lem shape", len(zhat_lem))
+        zhat_slice = zhat_lem[trial_start:trial_end]
+        print(f"zhat_slice shape: {len(zhat_slice)}")
+
+        zhat_lem_sliced_plot(zhat_slice, ax, disc_states)
+        padding = 2
+        ax.set_xlim(-padding, len(zhat_slice) - 1 + padding)
+
+        print(f"Trial Index {trial}: WM1={wm1}, Gate={gate}, WM2={wm2}, CuePlayed={cue}, Lick={lick}, Return={ret}")
+
+        ax.axvline(x=(wm1 // bin_size) - trial_start, lw=1.25, color='r', linestyle='--', label='WM1')
+        ax.axvline(x=(gate // bin_size) - trial_start, lw=1.25, color='g', linestyle='--', label='Gate')
+        ax.axvline(x=(wm2 // bin_size) - trial_start, lw=1.25, color='b', linestyle='--', label='WM2')
+        ax.axvline(x=(cue // bin_size) - trial_start, lw=1.25, color='c', linestyle='--', label='Cue Played')
+        ax.axvline(x=(lick // bin_size) - trial_start, lw=1.25, color='m', linestyle='--', label='Lick')
+        ax.axvline(x=(ret // bin_size) - trial_start, lw=1.25, color='y', linestyle='--', label='Return')
+
+        ax.set_title(f'Trial Index {trial}')
+        ax.set_xlabel('Time Index')
+        ax.set_ylabel('Most Likely State')
+        ax.legend()
+
+    return fig, axes
+
 
 if __name__ == "__main__":
 
     p1 = "data/shivam/Bessel_140_250/1348DR/Expert/GO"
 
     p2 = "data/shivam/Bessel_140_250/1348DR/Naive_to_expert/Operant/In"
-
-    print(np.shape(full_unt))

@@ -2565,6 +2565,18 @@ wheels = [
 ]
 
 [[package]]
+name = "matlab"
+version = "0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/ea/1ecc1d9dfde594111b395dff9637183225dfb55b54fff4a906ba0ad5095a/matlab-0.1.tar.gz", hash = "sha256:8b13f7f121fcfb138203e35fa931e5f434abeefccfc583f8b3b4e2c0d0e7bcae", size = 538, upload-time = "2014-10-03T22:43:53.169Z" }
+
+[[package]]
+name = "matlabengine"
+version = "26.1.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/2a/73c1986fbee2194dc9e3fb3deaded28cbd0c76073c5e625d225b5f64614b/matlabengine-26.1.12.tar.gz", hash = "sha256:060226fe650d843317d4540bdda3592d0d88ad4c4e6cb9c5f50d0efc81b1438a", size = 21313, upload-time = "2026-05-08T16:05:11.921Z" }
+
+[[package]]
 name = "matplotlib"
 version = "3.10.9"
 source = { registry = "https://pypi.org/simple" }
@@ -4949,6 +4961,8 @@ dependencies = [
     { name = "loguru" },
     { name = "lovely-tensors" },
     { name = "mat73" },
+    { name = "matlab" },
+    { name = "matlabengine" },
     { name = "matplotlib" },
     { name = "matplotlib-inline" },
     { name = "ml-collections" },
@@ -5009,6 +5023,8 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "lovely-tensors", specifier = ">=0.1.22" },
     { name = "mat73", specifier = ">=0.65" },
+    { name = "matlab", specifier = ">=0.1" },
+    { name = "matlabengine" },
     { name = "matplotlib", specifier = ">=3.10.9" },
     { name = "matplotlib-inline", specifier = ">=0.2.2" },
     { name = "ml-collections", specifier = ">=1.1.0" },

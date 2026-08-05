@@ -22,7 +22,7 @@ from src.gcamp8.gcamp8_load_util import ( load_dfoverf_dendrite, full_session_de
                                          full_session_trialsliced_dendrite, full_session_trialsliced_thresholded_dendrite, load_dfoverf_problemtest,
                                          trace_sanity_check_dendrite, session_concat_pipeline, spikes_smooth, load_trialbreak_dendrite, 
                                          gonogotrials_sliced_dendrite, load_trialtype_idx_dendrite, behavioral_plot_dendrite )
-from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_m2 )
+from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_m2, plot_zhatlem_indivtrials, load_trialbreak_m2)
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
                                   softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, 
@@ -73,14 +73,14 @@ class DataType(Enum):
 # NOTE: if running on gcamp8 data, need to set a date of session.
 
 def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataType, 
-                            trial_selection: Literal["go", "nogo", None] = None,
+                            trial_selection: Literal["go", "nogo", "right", "left",None] = None,
                             path_type: Literal["manual", "suite2p", "sliceTCA", "binarized", "reconstructed", None] = None,
                             layer: Literal["L2", "L3", None] = None,
                             testing: bool = False,
                             trial_idx: int = None,
                             trial_structure: Literal["single_trial", "full_sess", None] = None,
                             specific_loadtype: Literal["single_session_thresholded", "session_concat", "spikes", None] = None,
-                            roi=None, date=None, l23_type: Literal["bessel", "etl", None] = None, plot: bool=False, save_output: bool=False, nxpts=20, nypts=20, alpha=0.8, num_iters=50, margin=1.0):
+                            roi=None, date=None, m2_correct_only=False,l23_type: Literal["bessel", "etl", None] = None, plot: bool=False, bin_size=5, plot_type: Literal["svg", None] = None, save_output: bool=False, nxpts=20, nypts=20, alpha=0.8, num_iters=50, margin=1.0):
     """
     Run rSLDS on a full session of data, then PCA-project the resulting latent trajectory
     to 2D and plot the flow field of each discrete state's dynamics in PC space.
@@ -112,8 +112,8 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         data = bin_smooth(full.T).astype(int)
     
     elif type is DataType.M2:
-        sigd = load_sigd_m2(raw_data, date=date)
-        binned = bin_sigd_m2(sigd, bin_size=5)
+        sigd, retained_trial_idx = load_sigd_m2(raw_data, date=date, trial_selection=trial_selection, m2_correct_only=m2_correct_only)
+        binned = bin_sigd_m2(sigd, bin_size=bin_size)
         data = binned.T.astype(int)
         for_trace = binned
         print(f"Loaded M2 data for date {date}.\n")
@@ -304,6 +304,9 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     if trial_idx and trial_structure == "single_trial":
         key = f"{key}/trial{trial_idx}"
 
+    if m2_correct_only:
+        key = f"{key}/correct_only"
+
     if layer:
         key = f"{key}/{layer}"
 
@@ -320,26 +323,42 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         visualize_session(full, ax=ax0)
         ax0.set_title(f"Spike Raster Plot: {key}")
         fig0.tight_layout(pad=2)
-        fig0.savefig(output_folder / "spikes.png")
+        if plot_type == "svg":
+            fig0.savefig(output_folder / "spikes.svg", format="svg")
+        else:  
+            fig0.savefig(output_folder / "spikes.png")
+
     elif type is DataType.M2:
         fig0, axes0 = trace_sanity_check_m2(for_trace)
         fig0.suptitle(f"Calcium Trace of Neurons: {key}")  
-        fig0.savefig(output_folder / "calcium_trace.png")
+        if plot_type == "svg":
+            fig0.savefig(output_folder / "calcium_trace.svg", format="svg")
+        else:
+            fig0.savefig(output_folder / "calcium_trace.png")
 
     elif type is DataType.RbpCre:
         fig0, axes0 = trace_sanity_check(for_trace, random_seed=42)
         fig0.suptitle(f"Calcium Trace of Neurons: {key}")
-        fig0.savefig(output_folder / "calcium_trace.png")
+        if plot_type == "svg":
+            fig0.savefig(output_folder / "calcium_trace.svg", format="svg")
+        else:
+            fig0.savefig(output_folder / "calcium_trace.png")
 
     elif type is DataType.L23:
         fig0, axes0 = trace_sanity_check_l23(for_trace, random_seed=42)
         fig0.suptitle(f"Calcium Trace of Neurons: {key}")
-        fig0.savefig(output_folder / "calcium_trace.svg", format="svg")
+        if plot_type == "svg":
+            fig0.savefig(output_folder / "calcium_trace.svg", format="svg")
+        else:
+            fig0.savefig(output_folder / "calcium_trace.png")
     
     elif type is DataType.GCaMP8:
         fig0, axes0 = trace_sanity_check_dendrite(for_trace, random_seed=42)
         fig0.suptitle(f"Calcium Trace of Dendrites: {key}")
-        fig0.savefig(output_folder / "calcium_trace.png")
+        if plot_type == "svg":
+            fig0.savefig(output_folder / "calcium_trace.svg", format="svg")
+        else:
+            fig0.savefig(output_folder / "calcium_trace.png")
 
     # ELBO
     fig1, ax1 = plt.subplots(figsize=(6,6))
@@ -350,7 +369,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     ax1.set_ylabel("ELBO")
     fig1.tight_layout(pad=2)
 
-    fig1.savefig(output_folder / "elbo.svg", format='svg')
+    if plot_type == "svg":
+        fig1.savefig(output_folder / "elbo.svg", format='svg')
+    else:
+        fig1.savefig(output_folder / "elbo.png")
 
     # PCA EXPLAINED VARIANCE FROM LATENT DIMS
     fig1b, ax1b = plt.subplots(figsize=(6,6))
@@ -362,7 +384,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     ax1b.set_ylabel("Explained Variance Ratio")
     fig1b.tight_layout(pad=2)
 
-    fig1b.savefig(output_folder / "expl_var_ratio.svg", format='svg')
+    if plot_type == "svg":
+        fig1b.savefig(output_folder / "expl_var_ratio.svg", format='svg')
+    else:
+        fig1b.savefig(output_folder / "expl_var_ratio.png")
 
     # PLOT OF PC1 AND PC2 OVER TIME
     # RIGHT NOW THIS IS IRREGARDLESS OF GO, NOGO, OR FULL SET OF TRIALS. NEED TO FIX.
@@ -393,7 +418,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax1c_b.set_xlim(0, end_idx-start_idx)
 
         fig1c.tight_layout(pad=2)
-        fig1c.savefig(output_folder / "pc_timeseries.svg", format='svg')
+        if plot_type == "svg":
+            fig1c.savefig(output_folder / "pc_timeseries.svg", format='svg')
+        else:
+            fig1c.savefig(output_folder / "pc_timeseries.png")
 
     else:
         if type is DataType.M2:
@@ -421,8 +449,11 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
             ax1c_b.set_ylabel("PC2 Value")
             ax1c_b.set_xlim(0, length)
 
-        fig1c.tight_layout(pad=2)
-        fig1c.savefig(output_folder / "pc_timeseries.svg", format='svg')
+            fig1c.tight_layout(pad=2)
+            if plot_type == "svg":
+                fig1c.savefig(output_folder / "pc_timeseries.svg", format='svg')
+            else:
+                fig1c.savefig(output_folder / "pc_timeseries.png")
 
     # PLOT OF MOST PROBABLE STATE, PROBABILITY PLOT
     if type is DataType.L23: # only l23 has the behavioral plot function set up, still need to do for the other datatypes
@@ -441,7 +472,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax2000.set_title(f"Probability Time Series of Discrete States: \n{key}")
         ax2000.set_xlabel("Time (frames)")
         fig2000.tight_layout(pad=2)
-        fig2000.savefig(output_folder / "state_probabilities.svg", format='svg')
+        if plot_type == "svg":
+            fig2000.savefig(output_folder / "state_probabilities.svg", format='svg')
+        else:
+            fig2000.savefig(output_folder / "state_probabilities.png")
    
     # PLOT OF MOST LIKELY DISCRETE STATE OVER TIME
     
@@ -494,7 +528,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax1d_b.set_xlabel("Time (frames)")
         
         fig1d.tight_layout(pad=2)
-        fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+        if plot_type == "svg":
+            fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+        else:
+            fig1d.savefig(output_folder / "most_likely_state.png")
 
     elif type is DataType.GCaMP8:
         fig1d, [ax1d_a, ax1d_b] = plt.subplots(nrows=2, ncols=1, figsize=(10, 6))
@@ -538,7 +575,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax1d_b.set_xlabel("Time (frames)")
         
         fig1d.tight_layout(pad=2)
-        fig1d.savefig(output_folder / "most_likely_state.png")
+        if plot_type == "svg":
+            fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+        else:
+            fig1d.savefig(output_folder / "most_likely_state.png")
 
     elif type is DataType.RbpCre:
         fig1d, [ax1d_a, ax1d_b] = plt.subplots(nrows=2, ncols=1, figsize=(10, 6))
@@ -576,19 +616,27 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax1d_b.set_xlabel("Time (frames)")
         
         fig1d.tight_layout(pad=2)
-        fig1d.savefig(output_folder / "most_likely_state.png")
+        if plot_type == "svg":
+            fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+        else:
+            fig1d.savefig(output_folder / "most_likely_state.png")
 
     elif type is DataType.M2:
-        fig1d, ax1d = plt.subplots(figsize=(10, 4))
-        full = zhat_lem
-        
-        most_likely_state_plot(disc_states, full, ax1d, trial_structure="full_sess")
+        print("zhat_lem shape", len(zhat_lem))
 
-        ax1d.set_title(f"Most Likely Discrete State, Full Session: \n{key}")
-        ax1d.set_xlabel("Time (frames)")
-                
+        if trial_selection or m2_correct_only:
+            trial_break = load_trialbreak_m2(raw_data, date=date, sliced=True, idx_list = retained_trial_idx)
+        else:
+            trial_break = load_trialbreak_m2(raw_data, date=date)
+
+        fig1d, axes = plot_zhatlem_indivtrials(trial_break, raw_data, date, zhat_lem, disc_states, bin_size)
+
         fig1d.tight_layout(pad=2)
-        fig1d.savefig(output_folder / "most_likely_state.png")
+        
+        if plot_type == "svg":
+            fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+        else:
+            fig1d.savefig(output_folder / "most_likely_state.png")
 
     else:
         fig1d, ax1d = plt.subplots(figsize=(10, 4))
@@ -607,7 +655,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax1d.set_xlabel("Time (frames)")
         
         fig1d.tight_layout(pad=2)
-        fig1d.savefig(output_folder / "most_likely_state.png")
+        if plot_type == "svg":
+            fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+        else:
+            fig1d.savefig(output_folder / "most_likely_state.png")
 
     # INFERRED TRAJECTORY
     fig2, ax2 = plt.subplots(figsize=(6,6))
@@ -617,7 +668,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     ax2.set_ylabel("PC2")
     fig2.tight_layout(pad=2)
 
-    fig2.savefig(output_folder / "trajectory.svg", format='svg')
+    if plot_type == "svg":
+        fig2.savefig(output_folder / "trajectory.svg", format='svg')
+    else:
+        fig2.savefig(output_folder / "trajectory.png")
 
     # FLOW FIELD
     fig3, ax3 = plt.subplots(figsize=(6, 6))
@@ -627,7 +681,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
                         nxpts=nxpts, nypts=nypts, alpha=alpha, ax=ax3)
     fig3.tight_layout(pad=2)
     
-    fig3.savefig(output_folder / "flowfield.svg", format='svg')
+    if plot_type == "svg":
+        fig3.savefig(output_folder / "flowfield.svg", format='svg')
+    else:
+        fig3.savefig(output_folder / "flowfield.png")
 
     # SUPERIMPOSE TRAJECTORY AND FLOW FIELDS
     fig6, ax6 = plt.subplots(figsize=(6,6))
@@ -644,7 +701,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     ax6.set_ylabel("PC2")
     fig6.tight_layout(pad=2)
 
-    fig6.savefig(output_folder / "superimposedtraj.svg", format='svg')
+    if plot_type == "svg":
+        fig6.savefig(output_folder / "superimposedtraj.svg", format='svg')
+    else:
+        fig6.savefig(output_folder / "superimposedtraj.png")
 
     for i in range(disc_states):
         state_key = f"{key}/state{i}"
@@ -670,7 +730,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax4.set_ylabel("Imaginary Axis")
         fig4.tight_layout(pad=2)
 
-        fig4.savefig(state_output_folder / "eigenspectrum.svg", format='svg')
+        if plot_type == "svg":
+            fig4.savefig(state_output_folder / "eigenspectrum.svg", format='svg')
+        else:
+            fig4.savefig(state_output_folder / "eigenspectrum.png")
 
         # TIMECONSTANTS
         labels = eigs.astype(str)
@@ -682,7 +745,10 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax5.set_ylabel('Milliseconds') # need to check this
         fig5.tight_layout(pad=2)
 
-        fig5.savefig(state_output_folder / "timeconstants.svg", format='svg')
+        if plot_type == "svg":
+            fig5.savefig(state_output_folder / "timeconstants.svg", format='svg')
+        else:
+            fig5.savefig(state_output_folder / "timeconstants.png")
 
         # SPIRAL ATTRACTOR SCORE
         eigvals = get_all_eigs(rslds_lem, disc_states, single_state=True, state_idx=i)
@@ -694,20 +760,23 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax20.bar_label(bars, padding=3)
         ax20.set_title(f'Spiral Attractor Scores for State {i}: \n{state_key}')
         fig20.tight_layout(pad=2)
-        fig20.savefig(state_output_folder / "spiralscores.svg", format='svg')
+        if plot_type == "svg":
+            fig20.savefig(state_output_folder / "spiralscores.svg", format='svg')
+        else:
+            fig20.savefig(state_output_folder / "spiralscores.png")
 
         # SINGLE NEURON CONTRIBUTION
         fig7 = single_neuron_contribution(state_idx=i, model=rslds_lem)
         # fig7.suptitle(f"Single Neuron Contributions of ROI {roi}: {key}")
-        fig7.savefig(state_output_folder / "single_neuron_contribution.svg", format='svg') 
+        if plot_type == "svg":
+            fig7.savefig(state_output_folder / "single_neuron_contribution.svg", format='svg')
+        else:
+            fig7.savefig(state_output_folder / "single_neuron_contribution.png")
      
 
     print(f"\nSAVED: plots at path {output_folder}\n")
     print("----------------------------------------------------------------------------------------------------\n")
     plt.close()
-
-    A = rslds_lem.dynamics.As # A shape is (num_states, 10, 10)
-    print("shape of A is: ", np.shape(A))
 
     if plot:
         plt.show()
