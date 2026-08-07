@@ -22,11 +22,12 @@ from src.gcamp8.gcamp8_load_util import ( load_dfoverf_dendrite, full_session_de
                                          full_session_trialsliced_dendrite, full_session_trialsliced_thresholded_dendrite, load_dfoverf_problemtest,
                                          trace_sanity_check_dendrite, session_concat_pipeline, spikes_smooth, load_trialbreak_dendrite, 
                                          gonogotrials_sliced_dendrite, load_trialtype_idx_dendrite, behavioral_plot_dendrite )
-from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_m2, plot_zhatlem_indivtrials, load_trialbreak_m2)
+from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_m2, plot_zhatlem_indivtrials, load_trialbreak_m2,
+                                 plot_zhatlem_lick )
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
                                   softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, 
-                                  full_go_nogo, get_all_eigs, get_spiral_score, state_probability_plot )
+                                  full_go_nogo, get_all_eigs, get_spiral_score, state_probability_plot, plot_trajectory_3d )
 
 # 3) other necessary imports
 import autograd.numpy as np
@@ -281,6 +282,7 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     pca = PCA(n_components=latent_dims)
     x_pc_numdims = pca.fit_transform(xhat_lem)   # (T, latent_dims)
     x_pc_2 = x_pc_numdims[:, :2]                     # (T, 2)
+    x_pc_3 = x_pc_numdims[:, :3]
     W = pca.components_[:, :2]                # (latent_dims, 2) loading matrix
     mu = np.mean(xhat_lem, axis=0)                # (latent_dims,)
 
@@ -624,19 +626,27 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     elif type is DataType.M2:
         print("zhat_lem shape", len(zhat_lem))
 
-        if trial_selection or m2_correct_only:
-            trial_break = load_trialbreak_m2(raw_data, date=date, sliced=True, idx_list = retained_trial_idx)
-        else:
-            trial_break = load_trialbreak_m2(raw_data, date=date)
+        trial_break, Fs = load_trialbreak_m2(raw_data, date=date)
 
-        fig1d, axes = plot_zhatlem_indivtrials(trial_break, raw_data, date, zhat_lem, disc_states, bin_size)
+        fig1d, _ = plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_states, bin_size)
 
         fig1d.tight_layout(pad=2)
-        
+
+        fig2d, ax2d = plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size)
+        ax2d.set_title(f"Mode Most Likely State - 3s before Lick to 3s after Lick: \n{key}")
+        ax2d.set_xlabel("Time Index")
+        ax2d.set_ylabel("Most Likely State")
+        ax2d.legend()
+        fig2d.tight_layout(pad=2)
+
         if plot_type == "svg":
             fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+            fig2d.savefig(output_folder / "most_likely_state_lickonly.svg", format='svg')
+
         else:
             fig1d.savefig(output_folder / "most_likely_state.png")
+            fig2d.savefig(output_folder / "most_likely_state_lickonly.png")
+
 
     else:
         fig1d, ax1d = plt.subplots(figsize=(10, 4))
@@ -672,6 +682,32 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         fig2.savefig(output_folder / "trajectory.svg", format='svg')
     else:
         fig2.savefig(output_folder / "trajectory.png")
+
+    # 3D TRAJECTORY
+    fig25 = plot_trajectory_3d(zhat_lem, x_pc_3, colors=colors)
+
+    fig25.update_layout(
+        title=f"Inferred Trajectory in PC Space (Laplace-EM): \n {key}",    
+        scene=dict(
+            xaxis_title='PC1',
+            yaxis_title='PC2',
+            zaxis_title='PC3',
+            aspectmode='data'
+        ),
+        margin=dict(l=0, r=0, b=0, t=50),
+        autosize=True,
+        width=None
+    )
+
+    if plot_type == "svg":
+        fig25.write_image(output_folder / "3dtrajectory.svg")
+    else:
+        fig25.write_html(
+            output_folder / "3dtrajectory.html",
+            config={"responsive": True},
+            default_width="100%",
+            default_height="100%"
+        )
 
     # FLOW FIELD
     fig3, ax3 = plt.subplots(figsize=(6, 6))

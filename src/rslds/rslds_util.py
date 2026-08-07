@@ -12,6 +12,10 @@ import math
 from sklearn.model_selection import KFold
 import ssm
 from typing import Literal
+import plotly.graph_objects as go
+import plotly.express as px
+import warnings
+from matplotlib.colors import to_hex
 
 npr.seed(12345)
 
@@ -40,6 +44,57 @@ def plot_trajectory(z, x, ax=None, ls="-"):
                 color=colors[z[start] % len(colors)],
                 alpha=1.0)
     return ax
+
+
+def plot_trajectory_3d(z, x, fig=None, colors=None):
+    """
+    Plots a 3D trajectory colored by discrete states using Plotly.
+    
+    Parameters:
+    - z: 1D array of discrete state labels (length N)
+    - x: 2D array of 3D latent continuous states (shape N x 3)
+    - fig: existing plotly.graph_objects.Figure (optional)
+    - colors: list/array of hex/RGB color strings (optional)
+    """
+
+    print(colors)
+    print(type(colors))
+    print(colors[0])
+
+    new_colors = [to_hex(c) for c in colors]
+
+    if new_colors is None:
+        # Default qualitative color palette if none is passed
+        warnings.warn("now defaulting to Plotly generic colors instead of rSLDS colors.")
+        new_colors = px.colors.qualitative.Plotly
+
+    # Find change points where discrete state z transitions
+    zcps = np.concatenate(([0], np.where(np.diff(z))[0] + 1, [z.size]))
+    
+    if fig is None:
+        fig = go.Figure()
+
+    # Track distinct states to keep legend clean without duplicate entries
+    added_states = set()
+
+    for start, stop in zip(zcps[:-1], zcps[1:]):
+        state = z[start]
+        color = new_colors[state % len(new_colors)]
+        show_legend = state not in added_states
+        added_states.add(state)
+
+        fig.add_trace(go.Scatter3d(
+            x=x[start:stop + 1, 0],
+            y=x[start:stop + 1, 1],
+            z=x[start:stop + 1, 2],
+            mode='lines',
+            line=dict(color=color, width=3),
+            name=f'State {state}',
+            legendgroup=f'State {state}',
+            showlegend=show_legend
+        ))
+
+    return fig
     
 
 # need to add     

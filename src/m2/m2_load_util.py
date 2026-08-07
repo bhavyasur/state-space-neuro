@@ -7,6 +7,7 @@ where xxxx is the date as MMDD. within each day there is 'SigD', which is the df
 import scipy.io
 import os
 import numpy as np
+import warnings
 import sys
 from pathlib import Path
 import mat73
@@ -18,12 +19,22 @@ import zipfile
 from typing import Literal
 import pandas as pd
 import matlab.engine
+from scipy import stats
 
 import seaborn as sns
 color_names = ["windows blue", "red", "amber", "faded green"]
 colors = sns.xkcd_palette(color_names)
 sns.set_style("white")
 sns.set_context("talk")
+
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['axes.titlesize'] = 13
+plt.rcParams['font.size'] = 8
+plt.rcParams['figure.titlesize'] = 13
+plt.rcParams['axes.labelsize'] = 10  # For X and Y axis titles
+plt.rcParams['xtick.labelsize'] = 9 # For X-axis tick numbers
+plt.rcParams['ytick.labelsize'] = 9 # For Y-axis tick numbers
+plt.rcParams['legend.fontsize'] = 11
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -90,6 +101,7 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
     pre = c['NeuronByDay'][f'D{date}']['SigD']
 
     sigd = pre
+    print('Shape of sigd:', np.shape(sigd))
 
     # GETTING NECESSARY VARIABLES FROM MAT FILE
     eng = matlab.engine.start_matlab()
@@ -101,14 +113,20 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
 
     S = eng.workspace['T2_struct']
 
-    instructed_turn = list(S['InstructedTurn'])
-    correct = list(S['Correct'])
+    instructed_turn = np.int32(list(S['InstructedTurn']))
+    correct = np.int32(list(S['Correct']))
 
     eng.eval(f"WM1 = NeuronByDay.D{date}.S_WM1.eventFrameIdx;", nargout=0)
+    eng.eval(f"frameTime = NeuronByDay.D{date}.S_WM1.frameTime;", nargout=0)
     eng.eval(f"Return = NeuronByDay.D{date}.S_RETURN.eventFrameIdx;", nargout=0)
     
-    wm1 = list(eng.workspace['WM1'])
-    ret = list(eng.workspace['Return'])
+    wm1 = list(np.int32((eng.workspace['WM1'])))
+    ret = list(np.int32((eng.workspace['Return'])))
+    frame_time = np.array(list((eng.workspace['frameTime'])))
+
+    if len(ret) != len(wm1):
+        ret.append(frame_time[-1])
+        warnings.warn("Length of Return and WM1 are not equal. Appending last frame time to Return to make them equal.")
 
     # IF: right or left trials only
     if trial_selection:
@@ -127,10 +145,13 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
         retain = []
         for i in keep_trial_idx:
             start = int(wm1[i])
-            end = int(ret[i])
+            if i == keep_trial_idx[-1]: # if this value is the last value in keep_trial_idx
+                end = int(frame_time[-1]) # use the last frame time as the end
+            else:
+                end = int(wm1[i+1]) # otherwise use the beginning of the next trial 
             retain.append(sigd[:, start:end])
 
-        sliced_sigd = np.hstack(retain, axis=1) # stack the trials along the time axis
+        sliced_sigd = np.hstack(retain) # stack the trials along the time axis
         print('Shape of sliced_sigd:', np.shape(sliced_sigd))
         
         return sliced_sigd, keep_trial_idx
@@ -139,15 +160,22 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
     else:
         if m2_correct_only:
             correct_trial_idx = [i for i in range(len(correct)) if correct[i] == 1]
-        
+
+            print("len correct_trial_idx", len(correct_trial_idx))
+            print("len wm1", len(wm1))
+            print("len ret", len(ret))
+
             retain = []
             for i in correct_trial_idx:
                 start = int(wm1[i])
-                end = int(ret[i])
+                if i == correct_trial_idx[-1]: # if this value is the last value in keep_trial_idx
+                    end = int(frame_time[-1]) # use the last frame time as the end
+                else:
+                    end = int(wm1[i+1]) # otherwise use the beginning of the next trial 
                 retain.append(sigd[:, start:end])
         
-            sliced_sigd = np.hstack(retain, axis=1) # stack the trials along the time axis
-            print('Shape of sliced_sigd, correct_only for all trials:', np.shape(sigd))
+            sliced_sigd = np.hstack(retain) # stack the trials along the time axis
+            print('Shape of sliced_sigd, correct_only for all trials:', np.shape(sliced_sigd))
             return sliced_sigd, correct_trial_idx
         else:
             return sigd, list(range(len(instructed_turn))) # second return value is just a list of all trial indices, since we are not slicing the data
@@ -157,11 +185,11 @@ def trace_sanity_check_m2(binned):
     """this function visualizes a trace of all the neurons for a random set of 100 time steps so you can sanity check that the neurons activity is correct."""
     num_neurons = np.shape(binned)[0]
   
-    rng = np.random.default_rng()
-    randint = rng.integers(0,1000)
+    # rng = np.random.default_rng()
+    # randint = rng.integers(0,1000)
     
     len_slice = min(num_neurons, 15)
-    sliced = binned[0:len_slice, randint:randint+1000]
+    sliced = binned[0:len_slice, 100:1100]
 
     fig, axes = plt.subplots(nrows=len_slice, ncols=1, figsize=(8, 8), sharex=True)
 
@@ -178,48 +206,56 @@ def trace_sanity_check_m2(binned):
 
     return fig, axes
 
-def load_trialbreak_m2(data_path, date, sliced=False, idx_list: list = None):
+def load_trialbreak_m2(data_path, date):
     # you'd want to remove the first two trials, so the first value in trial_break is the value that you should retain the data from, delete everything before that
     eng = matlab.engine.start_matlab()
 
     eng.load(data_path, nargout=0)
 
-    # Assuming the MAT file contains a variable named NeuronByDay
     eng.eval(f"WM1 = NeuronByDay.D{date}.S_WM1.eventFrameIdx;", nargout=0)
     eng.eval(f"Gate = NeuronByDay.D{date}.S_GATE.eventFrameIdx;", nargout=0)
     eng.eval(f"WM2 = NeuronByDay.D{date}.S_WM2.eventFrameIdx;", nargout=0)
     eng.eval(f"Cue = NeuronByDay.D{date}.S_CUE.eventFrameIdx;", nargout=0)
     eng.eval(f"Lick = NeuronByDay.D{date}.S_LICK.eventFrameIdx;", nargout=0)
     eng.eval(f"Return = NeuronByDay.D{date}.S_RETURN.eventFrameIdx;", nargout=0)
+    eng.eval(f"frameTime = NeuronByDay.D{date}.S_WM1.frameTime;", nargout=0)
+    eng.eval(f"Fs = NeuronByDay.D{date}.S_WM1.fs;", nargout=0)
+
+    wm1 = list(np.int32((eng.workspace['WM1'])))
+    gate = list(np.int32((eng.workspace['Gate'])))
+    wm2 = list(np.int32((eng.workspace['WM2'])))
+    cue = list(np.int32((eng.workspace['Cue'])))
+    lick = list(np.int32((eng.workspace['Lick'])))
+    ret = list(np.int32((eng.workspace['Return'])))
+    frame_time = np.array(list((eng.workspace['frameTime'])))
+    Fs = float(eng.workspace['Fs'])
+
+    if len(ret) != len(wm1):
+        ret.append(frame_time[-1])
+        warnings.warn("Length of Return and WM1 are not equal. Appending last frame time to Return to make them equal.")
 
     eng.eval(f"T2 = NeuronByDay.D{date}.S_WM1.T2;", nargout=0)
     eng.eval("T2_struct = table2struct(T2, 'ToScalar', true);", nargout=0)
 
     S = eng.workspace['T2_struct']
 
-    print("shape of T2_struct", np.shape(S))
-    print("keys of T2_struct", S.keys())
-
-    if sliced:
-        trialidx = idx_list
-    else:
-        num_trials = len(S['TrialIdx'])
-        trialidx = np.arange(num_trials)
+    num_trials = len(S['TrialIdx'])
+    trialidx = np.arange(num_trials)
 
     # store trial times as a list of dicts, each dict has times for Wm1, gate, wm2, cue played, lick, return
     all_trials = []
     for i in trialidx:
         trial_dict = {}
-        trial_dict["WM1"] = eng.workspace['WM1'][i]
-        trial_dict["Gate"] = eng.workspace['Gate'][i]
-        trial_dict["WM2"] = eng.workspace['WM2'][i]
-        trial_dict["CuePlayed"] = eng.workspace['Cue'][i]
-        trial_dict["Lick"] = eng.workspace['Lick'][i]
-        trial_dict["Return"] = eng.workspace['Return'][i]
+        trial_dict["WM1"] = wm1[i]
+        trial_dict["Gate"] = gate[i]
+        trial_dict["WM2"] = wm2[i]
+        trial_dict["CuePlayed"] = cue[i]
+        trial_dict["Lick"] = lick[i]
+        trial_dict["Return"] = ret[i]
 
         all_trials.append(trial_dict)
 
-    return all_trials
+    return all_trials, Fs
 
 def find_session_accuracy(data_path, date):
     calcium = Path(data_path)
@@ -271,62 +307,247 @@ def zhat_lem_sliced_plot(zhat_slice, ax, disc_states):
 
     return ax
 
-def plot_zhatlem_indivtrials(trial_break, data_path, date, zhat_lem, disc_states, bin_size):
-    
+
+def plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_states, bin_size):
+
+    # all original trials
     all_trials = trial_break
+    retained_trials = []
+    compressed_start = 0
 
-    num_trials = len(all_trials)
-    early = num_trials // 3
-    middle = (num_trials * 2) // 3
-    late = num_trials - 1
-    trial_list = [early, middle, late]
+    for idx in retained_trial_idx:
+        # cannot compute duration for the last original trial
+        if idx >= len(all_trials) - 1:
+            continue
 
-    fig, axes = plt.subplots(len(trial_list), 1, figsize=(10, 4*len(trial_list)))
-    
-    for trial in trial_list:
-        trial_dict = all_trials[trial-1]
-        wm1 = float(trial_dict["WM1"][0])
-        gate = float(trial_dict["Gate"][0])
-        wm2 = float(trial_dict["WM2"][0])
-        cue = float(trial_dict["CuePlayed"][0])
-        lick = float(trial_dict["Lick"][0])
-        ret = float(trial_dict["Return"][0])
+        trial_dict = all_trials[idx]
 
-        trial_start = int(wm1) // bin_size
-        trial_end = int(ret) // bin_size
+        wm1 = int(trial_dict["WM1"][0])
+        gate = int(trial_dict["Gate"][0])
+        wm2 = int(trial_dict["WM2"][0])
+        cue = int(trial_dict["CuePlayed"][0])
+        lick = int(trial_dict["Lick"][0])
+        ret = int(trial_dict["Return"][0])
+
+        next_wm1 = int(all_trials[idx + 1]["WM1"][0])
+        duration = next_wm1 - wm1
+
+        retained_trials.append({
+            "original_idx": idx,
+            "trial_start": compressed_start,
+            "trial_end": compressed_start + duration,
+            "WM1": compressed_start,
+            "Gate": compressed_start + (gate - wm1),
+            "WM2": compressed_start + (wm2 - wm1),
+            "CuePlayed": compressed_start + (cue - wm1),
+            "Lick": compressed_start + (lick - wm1),
+            "Return": compressed_start + (ret - wm1),
+        })
+        compressed_start += duration
+
+    num_trials = len(retained_trials)
+
+    trial_list = [ num_trials // 3, (2 * num_trials) // 3, num_trials - 1, ]
+
+    fig, axes = plt.subplots(len(trial_list), 1, figsize=(10, 4 * len(trial_list)))
+
+    if len(trial_list) == 1:
+        axes = [axes]
+
+    for ax, plot_idx in zip(axes, trial_list):
+        trial = retained_trials[plot_idx]
+
+        trial_start = trial["trial_start"] // bin_size
+        trial_end = trial["trial_end"] // bin_size
 
         print("trial_start", trial_start)
         print("trial_end", trial_end)
 
-        ax = axes[trial_list.index(trial)]
+        zhat_slice = zhat_lem[trial_start:trial_end]
 
         print("zhat_lem shape", len(zhat_lem))
-        zhat_slice = zhat_lem[trial_start:trial_end]
-        print(f"zhat_slice shape: {len(zhat_slice)}")
+        print("zhat_slice shape", len(zhat_slice))
 
         zhat_lem_sliced_plot(zhat_slice, ax, disc_states)
+
         padding = 2
         ax.set_xlim(-padding, len(zhat_slice) - 1 + padding)
 
-        print(f"Trial Index {trial}: WM1={wm1}, Gate={gate}, WM2={wm2}, CuePlayed={cue}, Lick={lick}, Return={ret}")
+        print(
+            f"Original Trial {trial['original_idx']}: "
+            f"WM1={trial['WM1'] // bin_size}, "
+            f"Gate={trial['Gate'] // bin_size}, "
+            f"WM2={trial['WM2'] // bin_size}, "
+            f"Cue={trial['CuePlayed'] // bin_size}, "
+            f"Lick={trial['Lick'] // bin_size}, "
+            f"Return={trial['Return'] // bin_size}"
+        )
 
-        ax.axvline(x=(wm1 // bin_size) - trial_start, lw=1.25, color='r', linestyle='--', label='WM1')
-        ax.axvline(x=(gate // bin_size) - trial_start, lw=1.25, color='g', linestyle='--', label='Gate')
-        ax.axvline(x=(wm2 // bin_size) - trial_start, lw=1.25, color='b', linestyle='--', label='WM2')
-        ax.axvline(x=(cue // bin_size) - trial_start, lw=1.25, color='c', linestyle='--', label='Cue Played')
-        ax.axvline(x=(lick // bin_size) - trial_start, lw=1.25, color='m', linestyle='--', label='Lick')
-        ax.axvline(x=(ret // bin_size) - trial_start, lw=1.25, color='y', linestyle='--', label='Return')
+        ax.axvline((trial["WM1"] // bin_size) - trial_start,
+                   lw=1.25, color='r', linestyle='--', label='WM1')
 
-        ax.set_title(f'Trial Index {trial}')
-        ax.set_xlabel('Time Index')
-        ax.set_ylabel('Most Likely State')
+        ax.axvline((trial["Gate"] // bin_size) - trial_start,
+                   lw=1.25, color='g', linestyle='--', label='Gate')
+
+        ax.axvline((trial["WM2"] // bin_size) - trial_start,
+                   lw=1.25, color='b', linestyle='--', label='WM2')
+
+        ax.axvline((trial["CuePlayed"] // bin_size) - trial_start,
+                   lw=1.25, color='c', linestyle='--', label='Cue Played')
+
+        ax.axvline((trial["Lick"] // bin_size) - trial_start,
+                   lw=1.25, color='m', linestyle='--', label='Lick')
+
+        ax.axvline((trial["Return"] // bin_size) - trial_start,
+                   lw=1.25, color='y', linestyle='--', label='Return')
+
+        ax.set_title(f"Original Trial {trial['original_idx']}")
+        ax.set_xlabel("Time Index")
+        ax.set_ylabel("Most Likely State")
         ax.legend()
 
     return fig, axes
 
+def plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size):
+
+    # all original trials
+    all_trials = trial_break
+    retained_trials = []
+    compressed_start = 0
+
+    for idx in retained_trial_idx:
+        # cannot compute duration for the last original trial
+        if idx >= len(all_trials) - 1:
+            continue
+
+        trial_dict = all_trials[idx]
+
+        wm1 = int(trial_dict["WM1"][0])
+        gate = int(trial_dict["Gate"][0])
+        wm2 = int(trial_dict["WM2"][0])
+        cue = int(trial_dict["CuePlayed"][0])
+        lick = int(trial_dict["Lick"][0])
+        ret = int(trial_dict["Return"][0])
+
+        next_wm1 = int(all_trials[idx + 1]["WM1"][0])
+        duration = next_wm1 - wm1
+
+        retained_trials.append({
+            "original_idx": idx,
+            "trial_start": compressed_start,
+            "trial_end": compressed_start + duration,
+            "WM1": compressed_start,
+            "Gate": compressed_start + (gate - wm1),
+            "WM2": compressed_start + (wm2 - wm1),
+            "CuePlayed": compressed_start + (cue - wm1),
+            "Lick": compressed_start + (lick - wm1),
+            "Return": compressed_start + (ret - wm1),
+        })
+        compressed_start += duration
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+    for i in range(len(retained_trials)):
+        trial = retained_trials[i]
+        trial_lick = trial["Lick"] // bin_size
+        before = int(trial_lick - ((3 * Fs) // bin_size))
+        after = int(trial_lick + ((3 * Fs) // bin_size))
+        zhat_retain = zhat_lem[before:after]
+        retain_zhat_list.append(zhat_retain)
+
+    print("min len", min(len(i) for i in retain_zhat_list))
+    print("max len", max(len(i) for i in retain_zhat_list))
+
+    stack = np.stack(retain_zhat_list, axis=0)
+    result = stats.mode(stack, axis=0)
+    zhat_mode = result.mode.squeeze()
+
+    print("Successfully found mean zhat for full trial set.\n")
+
+    zhat_lem_sliced_plot(zhat_mode, ax, disc_states)
+
+    ax.axvline(((3*Fs) // bin_size), lw=1.25, color='r', linestyle='--', label='Lick')
+
+    return fig, ax
+
 
 if __name__ == "__main__":
 
-    p1 = "data/shivam/Bessel_140_250/1348DR/Expert/GO"
+    path_1357 = "data/dj/NeuronByDay_1357_qc_rescued.mat"
+    plot_1357 = "M2_1357"
 
-    p2 = "data/shivam/Bessel_140_250/1348DR/Naive_to_expert/Operant/In"
+    naive_1357 = "0520"
+    interm_1357 = "0605"
+    expert_1357 = "0626"
+
+    path_073723 = "data/dj/NeuronByDay_073723_qc_rescued.mat"
+    plot_073723 = "M2_073723"
+
+    naive_073723 = "0417" # 55%
+    interm_073723 = "0424" 
+    expert_073723 = "0501" # 83%
+
+
+    # ----------------------------
+
+    for date in [naive_1357, interm_1357, expert_1357]:
+        for trial_selection in [None, "right", "left"]:
+            for m2_correct_only in [False, True]:
+                raw_data = path_1357
+                key = plot_1357
+                output_folder_1 = f"output/{key}/{date}"
+                if trial_selection:
+                    output_folder_2 = f"{output_folder_1}/{trial_selection}"
+                else:
+                    output_folder_2 = f"{output_folder_1}/full"
+                if m2_correct_only:
+                    output_folder_3 = f"{output_folder_2}/correct_only"
+                else:
+                    output_folder_3 = output_folder_2
+
+                new_key = output_folder_3
+
+                output_folder = Path(f"{output_folder_3}/4states_8dims")
+                output_folder.mkdir(parents=True, exist_ok=True)
+
+                sigd, retained_trial_idx = load_sigd_m2(raw_data, date=date, trial_selection=trial_selection, m2_correct_only=m2_correct_only)
+                binned = bin_sigd_m2(sigd, bin_size=3)
+                data = binned.T.astype(int)
+                for_trace = binned
+
+                fig0, axes0 = trace_sanity_check_m2(for_trace)
+                fig0.suptitle(f"Calcium Trace of Neurons: {new_key}")  
+                fig0.savefig(output_folder / "calcium_trace.png")
+                print(f"saved at {output_folder}")
+
+
+    for date in [naive_073723, interm_073723, expert_073723]:
+        for trial_selection in [None, "right", "left"]:
+            for m2_correct_only in [False, True]:
+                raw_data = path_073723
+                key = plot_073723
+                output_folder_1 = f"output/{key}/{date}"
+                if trial_selection:
+                    output_folder_2 = f"{output_folder_1}/{trial_selection}"
+                else:
+                    output_folder_2 = f"{output_folder_1}/full"
+                if m2_correct_only:
+                    output_folder_3 = f"{output_folder_2}/correct_only"
+                else:
+                    output_folder_3 = output_folder_2
+
+                new_key = output_folder_3
+
+                output_folder = Path(f"{output_folder_3}/4states_8dims")
+                output_folder.mkdir(parents=True, exist_ok=True)
+
+                sigd, retained_trial_idx = load_sigd_m2(raw_data, date=date, trial_selection=trial_selection, m2_correct_only=m2_correct_only)
+                binned = bin_sigd_m2(sigd, bin_size=3)
+                data = binned.T.astype(int)
+                for_trace = binned
+
+                fig0, axes0 = trace_sanity_check_m2(for_trace)
+                fig0.suptitle(f"Calcium Trace of Neurons: {new_key}")  
+                fig0.savefig(output_folder / "calcium_trace.png")
+                print(f"saved at {output_folder}")
