@@ -23,7 +23,7 @@ from src.gcamp8.gcamp8_load_util import ( load_dfoverf_dendrite, full_session_de
                                          trace_sanity_check_dendrite, session_concat_pipeline, spikes_smooth, load_trialbreak_dendrite, 
                                          gonogotrials_sliced_dendrite, load_trialtype_idx_dendrite, behavioral_plot_dendrite )
 from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_m2, plot_zhatlem_indivtrials, load_trialbreak_m2,
-                                 plot_zhatlem_lick, plot_zhatlem_probability )
+                                 plot_zhatlem_lick, plot_zhatlem_probability, slice_zhatlem_for_trajectory )
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
                                   softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, 
@@ -113,10 +113,17 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         data = bin_smooth(full.T).astype(int)
     
     elif type is DataType.M2:
-        sigd, retained_trial_idx = load_sigd_m2(raw_data, date=date, trial_selection=trial_selection, m2_correct_only=m2_correct_only)
-        binned = bin_sigd_m2(sigd, bin_size=bin_size)
-        data = binned.T.astype(int)
-        for_trace = binned
+        if testing:
+            sigd, retained_trial_idx = load_sigd_m2(raw_data, date=date)
+            binned = bin_sigd_m2(sigd, bin_size=bin_size)
+            data = binned.T.astype(int)
+            for_trace = binned
+            print("Running as 'testing', training the model on the full, continuous set regardless of parameters. Plots will be from sliced versions of model output.")
+        else:
+            sigd, retained_trial_idx = load_sigd_m2(raw_data, date=date, trial_selection=trial_selection, m2_correct_only=m2_correct_only)
+            binned = bin_sigd_m2(sigd, bin_size=bin_size)
+            data = binned.T.astype(int)
+            for_trace = binned
         print(f"Loaded M2 data for date {date}.\n")
         print("Running on full session.\n")
 
@@ -234,11 +241,13 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
                         emissions="poisson_orthog",
                         emission_kwargs=dict(link="softplus"))
         print(f"Instantiating model using Poisson Orthogonal emissions type.\n")
+
     elif type is DataType.M2:
         rslds = ssm.SLDS(num_obs, disc_states, latent_dims,
                         transitions="recurrent_only",
                         emissions="gaussian_orthog")        
         print(f"Instantiating model using Gaussian Orthogonal emissions type.\n")
+
     elif type is DataType.RbpCre:
         rslds = ssm.SLDS(num_obs, disc_states, latent_dims,
                         transitions="recurrent_only",
@@ -294,28 +303,31 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
             key = plot_key
     else:
         key = plot_key
-    
-    if path_type:
-        key = f"{key}/{path_type}"
 
-    if trial_selection:
-        key = f"{key}/{trial_selection}"
+    if testing:
+        output_folder = Path(f"output/{key}/testing")
     else:
-        key = f"{key}/full"
-    
-    if trial_idx and trial_structure == "single_trial":
-        key = f"{key}/trial{trial_idx}"
+        if path_type:
+            key = f"{key}/{path_type}"
 
-    if m2_correct_only:
-        key = f"{key}/correct_only"
+        if trial_selection:
+            key = f"{key}/{trial_selection}"
+        else:
+            key = f"{key}/full"
+        
+        if trial_idx and trial_structure == "single_trial":
+            key = f"{key}/trial{trial_idx}"
 
-    if layer:
-        key = f"{key}/{layer}"
+        if m2_correct_only:
+            key = f"{key}/correct_only"
 
-    if roi:
-        output_folder = Path(f"output/{key}/{disc_states}states_{latent_dims}dims_roi{roi}")
-    else:
-        output_folder = Path(f"output/{key}/{disc_states}states_{latent_dims}dims")
+        if layer:
+            key = f"{key}/{layer}"
+
+        if roi:
+            output_folder = Path(f"output/{key}/{disc_states}states_{latent_dims}dims_roi{roi}")
+        else:
+            output_folder = Path(f"output/{key}/{disc_states}states_{latent_dims}dims")
 
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -626,32 +638,112 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     elif type is DataType.M2:
         print("zhat_lem shape", len(zhat_lem))
 
-        trial_break, Fs = load_trialbreak_m2(raw_data, date=date)
+        trial_break, Fs = load_trialbreak_m2(raw_data, date) # only depends on the session date, keeps all trials
 
-        fig1d, _ = plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_states, bin_size)
+        if testing:
+            """ in the testing case, we train the model on the full set of continuous data for the session. after the model is already trained, we extract
+            the certain trials we want (right vs left vs full, correct only vs all) from the already existing zhat_lem, and only plot those chosen trials.
 
-        fig1d.tight_layout(pad=2)
+            thus, dupe_retained_trial_idx is a workaround to get the indices of the trials we want to retain from the original trial list. zhat_sliced is a
+            sliced version of zhat_lem that only retains the desired trials for plotting, and dupe_retained_trial_idx is the corresponding trials so we can get
+            the location of the lick from trial_break.
+            """
+            for i in ['right', 'left', None]:
+                for j in [True, False]:
+                    if i == None:
+                        label1 = "full"
+                    else:
+                        label1 = f"{i}"
+                    if j == True:
+                        label2 = f"{label1}_correct_only"
+                    else:
+                        label2 = label1
 
-        fig2d, ax2d = plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size)
-        ax2d.set_title(f"Mode Most Likely State - 3s before Lick to 3s after Lick: \n{key}")
-        ax2d.set_xlabel("Time Index")
-        ax2d.set_ylabel("Most Likely State")
-        ax2d.legend()
-        fig2d.tight_layout(pad=2)
+                    output_folder2 = Path(f"{output_folder}/sliced_plots/{label2}")
+                    output_folder2.mkdir(parents=True, exist_ok=True)
 
-        fig2000, ax2000 = plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size)
-        ax2000.set_title(f"Probability of Discrete States Aligned Around Lick: \n{key}")
-        fig2000.tight_layout(pad=2)
+                    # LOADING FOR ALL PLOTS
+                    
+                    _, dupe_retained_trial_idx = load_sigd_m2(raw_data, date, trial_selection=i, m2_correct_only=j)
 
-        if plot_type == "svg":
-            fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
-            fig2d.savefig(output_folder / "most_likely_state_lickonly.svg", format='svg')
-            fig2000.savefig(output_folder / "state_probabilities.svg", format='svg')
+                    zhat_sliced = slice_zhatlem_for_trajectory(trial_break, zhat_lem, dupe_retained_trial_idx, Fs, bin_size)
+                    print("shape of zhat lem in main pipeline", np.shape(zhat_lem))
+                    print("shape of zhat sliced in main pipeline", np.shape(zhat_sliced))
 
+                    # SLICED TRAJECTORIES
+                    fig1, ax1 = plt.subplots(figsize=(6,6))
+                    plot_trajectory(zhat_sliced, x_pc_2, ax=ax1)
+                    lim = abs(x_pc_2).max(axis=0) + margin
+                    plot_pca_flowfield(rslds_lem, W, mu, key,
+                                        xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]),
+                                        nxpts=nxpts, nypts=nypts, alpha=alpha, ax=ax1)
+                    
+                    ax1.set_title(f"Sliced Superimposed Trajectory & Flowfield in PC Space (Laplace-EM): \n{label2}")
+                    ax1.set_xlabel("PC1")
+                    ax1.set_ylabel("PC2")
+                    fig1.tight_layout(pad=2)
+
+                    # NON SUPERIMPOSED TRAJECTORIES
+
+                    fig4, ax4 = plt.subplots(figsize=(6,6))
+                    plot_trajectory(zhat_sliced, x_pc_2, ax=ax4)
+                    ax4.set_title(f"Sliced Trajectory in PC Space (Laplace-EM): \n{label2}")
+                    ax4.set_xlabel("PC1")
+                    ax4.set_ylabel("PC2")
+                    fig4.tight_layout(pad=2)
+
+                    # MODE PLOT AROUND LICK
+                    fig2, ax2 = plot_zhatlem_lick(trial_break, zhat_sliced, Fs, dupe_retained_trial_idx, disc_states, bin_size)
+                    ax2.set_title(f"Mode Most Likely State - 3s before Lick to 3s after Lick: \n{label2}")
+                    ax2.set_xlabel("Time Index")
+                    ax2.set_ylabel("Most Likely State")
+                    ax2.legend()
+                    fig2.tight_layout(pad=2)
+
+                    # PROBABILITY PLOT AROUND LICK
+
+                    fig3, ax3 = plot_zhatlem_probability(trial_break, zhat_sliced, Fs, dupe_retained_trial_idx, disc_states, bin_size)
+                    ax3.set_title(f"Probability of Discrete States Aligned Around Lick: \n{label2}")
+                    fig3.tight_layout(pad=2)
+
+                    if plot_type == "svg":
+                        fig1.savefig(output_folder2 / f"super_traj.svg", format='svg')
+                        fig2.savefig(output_folder2 / f"modestates.svg", format='svg')
+                        fig3.savefig(output_folder2 / f"stateprobs.svg", format='svg')
+                        fig4.savefig(output_folder2 / f"traj.svg", format='svg')
+
+                    else:
+                        fig1.savefig(output_folder2 / f"super_traj.png")
+                        fig2.savefig(output_folder2 / f"modestates.png")
+                        fig3.savefig(output_folder2 / f"stateprobs.png")
+                        fig4.savefig(output_folder2 / f"traj.png")
+
+            
         else:
-            fig1d.savefig(output_folder / "most_likely_state.png")
-            fig2d.savefig(output_folder / "most_likely_state_lickonly.png")
-            fig2000.savefig(output_folder / "state_probabilities.png")
+            fig1d, _ = plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_states, bin_size)
+
+            fig1d.tight_layout(pad=2)
+
+            fig2d, ax2d = plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size)
+            ax2d.set_title(f"Mode Most Likely State - 3s before Lick to 3s after Lick: \n{key}")
+            ax2d.set_xlabel("Time Index")
+            ax2d.set_ylabel("Most Likely State")
+            ax2d.legend()
+            fig2d.tight_layout(pad=2)
+
+            fig2000, ax2000 = plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size)
+            ax2000.set_title(f"Probability of Discrete States Aligned Around Lick: \n{key}")
+            fig2000.tight_layout(pad=2)
+
+            if plot_type == "svg":
+                fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+                fig2d.savefig(output_folder / "most_likely_state_lickonly.svg", format='svg')
+                fig2000.savefig(output_folder / "state_probabilities.svg", format='svg')
+
+            else:
+                fig1d.savefig(output_folder / "most_likely_state.png")
+                fig2d.savefig(output_folder / "most_likely_state_lickonly.png")
+                fig2000.savefig(output_folder / "state_probabilities.png")
 
     else:
         fig1d, ax1d = plt.subplots(figsize=(10, 4))

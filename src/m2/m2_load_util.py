@@ -101,7 +101,7 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
     pre = c['NeuronByDay'][f'D{date}']['SigD']
 
     sigd = pre
-    print('Shape of sigd:', np.shape(sigd))
+    print('\n Shape of sigd:', np.shape(sigd))
 
     # GETTING NECESSARY VARIABLES FROM MAT FILE
     eng = matlab.engine.start_matlab()
@@ -152,18 +152,14 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
             retain.append(sigd[:, start:end])
 
         sliced_sigd = np.hstack(retain) # stack the trials along the time axis
-        print('Shape of sliced_sigd:', np.shape(sliced_sigd))
-        
+        print('\n Shape of sliced_sigd:', np.shape(sliced_sigd))
+
         return sliced_sigd, keep_trial_idx
 
     # if: FULL TRIAL SET
     else:
         if m2_correct_only:
             correct_trial_idx = [i for i in range(len(correct)) if correct[i] == 1]
-
-            print("len correct_trial_idx", len(correct_trial_idx))
-            print("len wm1", len(wm1))
-            print("len ret", len(ret))
 
             retain = []
             for i in correct_trial_idx:
@@ -175,7 +171,7 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
                 retain.append(sigd[:, start:end])
         
             sliced_sigd = np.hstack(retain) # stack the trials along the time axis
-            print('Shape of sliced_sigd, correct_only for all trials:', np.shape(sliced_sigd))
+            print('\n Shape of sliced_sigd, correct_only for all trials:', np.shape(sliced_sigd))
             return sliced_sigd, correct_trial_idx
         else:
             return sigd, list(range(len(instructed_turn))) # second return value is just a list of all trial indices, since we are not slicing the data
@@ -280,7 +276,7 @@ def zhat_lem_sliced_plot(zhat_slice, ax, disc_states):
     length_bar_draft = np.diff(rising_draft) 
 
     if rising_draft.size == 0:
-        print("zhat_lem does not contain any state changes. this may be correct, but could indicate an error in your data. Please check!")
+        print("\n zhat_lem does not contain any state changes. this may be correct, but could indicate an error in your data. Please check!")
         duration = len(zhat_slice)
         ax.barh(0.075, [duration], left=[0], height=0.15, color=colors[0 % len(colors)], alpha=0.8)
         ax.set_yticks([0.075], [f"state {zhat_slice[0]}"])
@@ -330,7 +326,8 @@ def plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_sta
         ret = int(trial_dict["Return"][0])
 
         next_wm1 = int(all_trials[idx + 1]["WM1"][0])
-        duration = next_wm1 - wm1
+        duration = ret - wm1
+        # duration = next_wm1 - wm1
 
         retained_trials.append({
             "original_idx": idx,
@@ -360,13 +357,7 @@ def plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_sta
         trial_start = trial["trial_start"] // bin_size
         trial_end = trial["trial_end"] // bin_size
 
-        print("trial_start", trial_start)
-        print("trial_end", trial_end)
-
         zhat_slice = zhat_lem[trial_start:trial_end]
-
-        print("zhat_lem shape", len(zhat_lem))
-        print("zhat_slice shape", len(zhat_slice))
 
         zhat_lem_sliced_plot(zhat_slice, ax, disc_states)
 
@@ -430,7 +421,8 @@ def plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states
         ret = int(trial_dict["Return"][0])
 
         next_wm1 = int(all_trials[idx + 1]["WM1"][0])
-        duration = next_wm1 - wm1
+        duration = ret - wm1
+        # duration = next_wm1 - wm1
 
         retained_trials.append({
             "original_idx": idx,
@@ -455,9 +447,6 @@ def plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states
         after = int(trial_lick + ((3 * Fs) // bin_size))
         zhat_retain = zhat_lem[before:after]
         retain_zhat_list.append(zhat_retain)
-
-    print("min len", min(len(i) for i in retain_zhat_list))
-    print("max len", max(len(i) for i in retain_zhat_list))
 
     stack = np.stack(retain_zhat_list, axis=0)
     result = stats.mode(stack, axis=0)
@@ -494,7 +483,8 @@ def plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc
         ret = int(trial_dict["Return"][0])
 
         next_wm1 = int(all_trials[idx + 1]["WM1"][0])
-        duration = next_wm1 - wm1
+        duration = ret - wm1
+        # duration = next_wm1 - wm1
 
         retained_trials.append({
             "original_idx": idx,
@@ -520,13 +510,10 @@ def plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc
         zhat_retain = zhat_lem[before:after]
         retain_zhat_list.append(zhat_retain)
 
-    print("min len", min(len(i) for i in retain_zhat_list))
-    print("max len", max(len(i) for i in retain_zhat_list))
-
     stack = np.stack(retain_zhat_list, axis=0)
     
-    print("Number of trials:", stack.shape[0])
-    print("Frames per trial:", stack.shape[1])
+    print("\n Number of trials:", stack.shape[0])
+    print("\n Frames per trial:", stack.shape[1])
 
     # probability of each state at each frame
 
@@ -556,13 +543,63 @@ def plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc
     ax.set_ylabel("Probability")
     ax.set_ylim(0, 1)
     ax.set_xlim(0, stack.shape[1])
-    
+
     ax.axvline(((3*Fs) // bin_size), lw=1.25, color='r', linestyle='--', label='Lick')
 
     ax.legend()
 
     return fig, ax
-    
+
+def slice_zhatlem_for_trajectory(trial_break, zhat_lem, retained_trial_idx, Fs, bin_size):
+
+    all_trials = trial_break
+    retained_trials = []
+    compressed_start = 0
+
+    for idx in retained_trial_idx:
+        # cannot compute duration for the last original trial
+        if idx >= len(all_trials) - 1:
+            continue
+
+        trial_dict = all_trials[idx]
+
+        wm1 = int(trial_dict["WM1"][0])
+        gate = int(trial_dict["Gate"][0])
+        wm2 = int(trial_dict["WM2"][0])
+        cue = int(trial_dict["CuePlayed"][0])
+        lick = int(trial_dict["Lick"][0])
+        ret = int(trial_dict["Return"][0])
+
+        next_wm1 = int(all_trials[idx + 1]["WM1"][0])
+        duration = ret - wm1
+        # duration = next_wm1 - wm1
+
+        retained_trials.append({
+            "original_idx": idx,
+            "trial_start": compressed_start,
+            "trial_end": compressed_start + duration,
+            "WM1": compressed_start,
+            "Gate": compressed_start + (gate - wm1),
+            "WM2": compressed_start + (wm2 - wm1),
+            "CuePlayed": compressed_start + (cue - wm1),
+            "Lick": compressed_start + (lick - wm1),
+            "Return": compressed_start + (ret - wm1),
+        })
+        compressed_start += duration
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+    for i in range(len(retained_trials)):
+        trial = retained_trials[i]
+        trial_start = trial["trial_start"] // bin_size
+        trial_end = trial["trial_end"] // bin_size
+        zhat_retain = zhat_lem[trial_start:trial_end]
+        retain_zhat_list.append(zhat_retain)
+
+    zhat_sliced = np.concatenate(retain_zhat_list)
+
+    return zhat_sliced    
 
 
 if __name__ == "__main__":
