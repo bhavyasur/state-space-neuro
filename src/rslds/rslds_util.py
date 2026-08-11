@@ -729,79 +729,126 @@ def get_spiral_score(eigenvalues_allstates, disc_states, state_idx: int = None, 
 
 
 # PLOT FOR PROBABILITY OF STATES
-def state_probability_plot(trial_break, zhat_lem, disc_states, trial_selection: Literal["go", "nogo", None] = None, gonogo=None, ax=None):
-    min = int(np.min(trial_break)) # should return the minimum trial length
 
-    if trial_selection == "go" or trial_selection == "nogo":
-        zhat_trial_list = []
+def state_probability_plot(trial_break, zhat_lem, disc_states, trial_selection: Literal["go", "nogo", None] = None,
+    gonogo=None, ax=None):
+    """
+    plot  probability of each discrete state at each frame
+    across trials.
 
-        gonogo_trial_break = []
-        for i in range(len(gonogo)):
-            idx = gonogo[i]
-            length = trial_break[idx-1]
-            gonogo_trial_break.append(length)
+    x-axis = frame within trial
+    y-axis = probability of being in that state
+    """
 
-        time_now = int(0)
-        for i in range(len(gonogo_trial_break)):
-            len_trial = int(gonogo_trial_break[i])
-            trial_zhat = zhat_lem[time_now:(time_now + len_trial)]
-            zhat_trial_list.append(trial_zhat)
-            time_now += len_trial
+    if ax is None:
+        fig, ax = plt.subplots()
 
-        if len(zhat_trial_list) != len(gonogo_trial_break):
-            raise ValueError("trial list does not contain the correct number of trials")
+    trial_break = np.asarray(trial_break, dtype=int)
+    zhat_lem = np.asarray(zhat_lem)
 
-        truncated_list = []
-        for trial in zhat_trial_list:
-            retain = trial[0:min]
-            truncated_list.append(retain)
+    if trial_selection in ("go", "nogo"):
 
-        print("len truncated list", len(truncated_list))
-        print("shape of first item trunc", np.shape(truncated_list[0]))
-        print("shape of last item trunc", np.shape(truncated_list[-1]))
+        if gonogo is None:
+            raise ValueError(
+                "gonogo must be provided when trial_selection "
+                "is 'go' or 'nogo'"
+            )
 
-        if len(truncated_list) != len(gonogo_trial_break):
-            raise ValueError("truncated trial list does not contain the correct number of trials")
-        
-        stack = np.stack(truncated_list, axis=0)
-        new_arr = np.zeros((disc_states, np.shape(stack)[1]))
-        for i in range(np.shape(stack)[0]):
-            col = list(stack[:,i])
-            counts = np.sum(col == np.arange(disc_states)[:, None], axis=1)
-            for j in range(disc_states):
-                jcount = col.count(j)
-                jprob = float(jcount / len(col))
-                new_arr[j, i] = jprob
-    
+        # gonogo is assumed to contain MATLAB-style 1-based
+        # trial indices
+        trial_indices = np.asarray(gonogo, dtype=int) - 1
+
+        if np.any(trial_indices < 0) or np.any(
+            trial_indices >= len(trial_break)
+        ):
+            raise IndexError(
+                "gonogo contains trial indices outside "
+                "the range of trial_break"
+            )
+
+        selected_trial_break = trial_break[trial_indices]
+
     else:
-        zhat_trial_list = []
 
-        time_now = int(0)
-        for i in range(len(trial_break)):
-            len_trial = int(trial_break[i])
-            trial_zhat = zhat_lem[time_now:(time_now + len_trial)]
-            zhat_trial_list.append(trial_zhat)
-            time_now += len_trial
+        selected_trial_break = trial_break
 
-        if len(zhat_trial_list) != len(trial_break):
-            raise ValueError("trial list does not contain the correct number of trials")
+    # Split zhat_lem into trials
+    zhat_trial_list = []
 
-        truncated_list = []
-        for trial in zhat_trial_list:
-            retain = trial[0:min]
-            truncated_list.append(retain)
+    time_now = 0
 
-        if len(truncated_list) != len(trial_break):
-            raise ValueError("truncated trial list does not contain the correct number of trials")
-        
-        stack = np.stack(truncated_list, axis=0)
-        new_arr = np.zeros((disc_states, np.shape(stack)[1]))
-        for i in range(np.shape(stack)[0]):
-            col = list(stack[:,i])
-            for j in range(disc_states):
-                jcount = col.count(j)
-                jprob = float(jcount / len(col))
-                new_arr[j, i] = jprob
+    for trial_length in selected_trial_break:
 
-    ax.plot(new_arr.T, color=colors[0 % len(colors)], linewidth=1.5)
+        trial_length = int(trial_length)
+
+        trial_zhat = zhat_lem[
+            time_now:time_now + trial_length
+        ]
+
+        zhat_trial_list.append(trial_zhat)
+
+        time_now += trial_length
+
+    # Check number of trials
+    if len(zhat_trial_list) != len(selected_trial_break):
+        raise ValueError(
+            "Trial list does not contain the correct "
+            "number of trials"
+        )
+
+    min_trial_length = int(np.min(selected_trial_break))
+
+    truncated_list = []
+
+    for trial in zhat_trial_list:
+
+        if len(trial) < min_trial_length:
+            raise ValueError(
+                "A trial is shorter than the expected "
+                "minimum trial length."
+            )
+
+        truncated_list.append(
+            trial[:min_trial_length]
+        )
+
+    stack = np.stack(truncated_list, axis=0)
+
+    print("Number of trials:", stack.shape[0])
+    print("Frames per trial:", stack.shape[1])
+
+    # probability of each state at each frame
+
+    new_arr = np.zeros(
+        (disc_states, min_trial_length),
+        dtype=float
+    )
+
+    for state in range(disc_states):
+
+        new_arr[state, :] = np.mean(
+            stack == state,
+            axis=0
+        )
+
+    for state in range(disc_states):
+
+        ax.plot(
+            np.arange(min_trial_length),
+            new_arr[state, :],
+            linewidth=2,
+            label=f"State {state}",
+            color=colors[state % len(colors)]
+        )
+
+    ax.set_xlabel("Frame")
+    ax.set_ylabel("Probability")
+    ax.set_ylim(0, 1)
+    ax.set_xlim(0, min_trial_length)
+
+    ax.legend()
+
     return ax
+
+
+

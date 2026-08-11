@@ -23,7 +23,7 @@ from src.gcamp8.gcamp8_load_util import ( load_dfoverf_dendrite, full_session_de
                                          trace_sanity_check_dendrite, session_concat_pipeline, spikes_smooth, load_trialbreak_dendrite, 
                                          gonogotrials_sliced_dendrite, load_trialtype_idx_dendrite, behavioral_plot_dendrite )
 from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_m2, plot_zhatlem_indivtrials, load_trialbreak_m2,
-                                 plot_zhatlem_lick )
+                                 plot_zhatlem_lick, plot_zhatlem_probability )
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
                                   softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, 
@@ -639,14 +639,19 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
         ax2d.legend()
         fig2d.tight_layout(pad=2)
 
+        fig2000, ax2000 = plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size)
+        ax2000.set_title(f"Probability of Discrete States Aligned Around Lick: \n{key}")
+        fig2000.tight_layout(pad=2)
+
         if plot_type == "svg":
             fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
             fig2d.savefig(output_folder / "most_likely_state_lickonly.svg", format='svg')
+            fig2000.savefig(output_folder / "state_probabilities.svg", format='svg')
 
         else:
             fig1d.savefig(output_folder / "most_likely_state.png")
             fig2d.savefig(output_folder / "most_likely_state_lickonly.png")
-
+            fig2000.savefig(output_folder / "state_probabilities.png")
 
     else:
         fig1d, ax1d = plt.subplots(figsize=(10, 4))

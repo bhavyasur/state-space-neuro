@@ -102,13 +102,13 @@ if __name__=="__main__":
 
     
     naive_go1 = "data/shivam/Bessel_140_250/1348DR/Naive/GO"
-    plot_naive_go1 = "Bessel_140_250_1348DR/Naive_GO/svg"
+    plot_naive_go1 = "Bessel_140_250_1348DR/Naive_GO"
 
     intermediate_go1 = "data/shivam/Bessel_140_250/1348DR/Intermediate/GO"
-    plot_intermediate_go1 = "Bessel_140_250_1348DR/Intermediate_GO/svg"
+    plot_intermediate_go1 = "Bessel_140_250_1348DR/Intermediate_GO"
 
     expert_go1 = "data/shivam/Bessel_140_250/1348DR/Expert/GO"
-    plot_expert_go1 = "Bessel_140_250_1348DR/Expert_GO/svg"
+    plot_expert_go1 = "Bessel_140_250_1348DR/Expert_GO"
 
     naive_nogo1 = "data/shivam/Bessel_140_250/1348DR/Naive/NOGO"
     plot_naive_nogo1 = "Bessel_140_250_1348DR/Naive_NOGO"
