@@ -27,7 +27,8 @@ from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
                                   softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, 
-                                  full_go_nogo, get_all_eigs, get_spiral_score, state_probability_plot, plot_trajectory_3d )
+                                  full_go_nogo, get_all_eigs, get_spiral_score, state_probability_plot, plot_trajectory_3d,
+                                   plot_pca_flowfield_3d )
 
 # 3) other necessary imports
 import autograd.numpy as np
@@ -81,7 +82,11 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
                             trial_idx: int = None,
                             trial_structure: Literal["single_trial", "full_sess", None] = None,
                             specific_loadtype: Literal["single_session_thresholded", "session_concat", "spikes", None] = None,
-                            roi=None, date=None, m2_correct_only=False,l23_type: Literal["bessel", "etl", None] = None, plot: bool=False, bin_size=5, plot_type: Literal["svg", None] = None, save_output: bool=False, nxpts=20, nypts=20, alpha=0.8, num_iters=50, margin=1.0):
+                            roi=None, date=None, m2_correct_only=False, m2_miss_only=False, 
+                            m2_sensor: Literal['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick', None] = None, sensor_length: Literal['1s', '1.5s', None] = None,
+                            l23_type: Literal["bessel", "etl", None] = None, 
+                            plot: bool=False, bin_size=5, plot_type: Literal["svg", None] = None, save_output: bool=False, 
+                            nxpts=20, nypts=20, alpha=0.8, num_iters=50, margin=1.0):
     """
     Run rSLDS on a full session of data, then PCA-project the resulting latent trajectory
     to 2D and plot the flow field of each discrete state's dynamics in PC space.
@@ -120,12 +125,12 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
             for_trace = binned
             print("Running as 'testing', training the model on the full, continuous set regardless of parameters. Plots will be from sliced versions of model output.")
         else:
-            sigd, retained_trial_idx = load_sigd_m2(raw_data, date=date, trial_selection=trial_selection, m2_correct_only=m2_correct_only)
+            sigd, retained_trial_idx = load_sigd_m2(raw_data, date=date, trial_selection=trial_selection, m2_sensor=m2_sensor, 
+                                                    m2_correct_only=m2_correct_only, m2_miss_only=m2_miss_only, sensor_length=sensor_length)
             binned = bin_sigd_m2(sigd, bin_size=bin_size)
             data = binned.T.astype(int)
             for_trace = binned
         print(f"Loaded M2 data for date {date}.\n")
-        print("Running on full session.\n")
 
     elif type is DataType.RbpCre:
         go_idx, nogo_idx = load_trialtype_idx_rbp(raw_data, path_type=path_type, roi=roi)
@@ -288,12 +293,16 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     rslds_lem = copy.deepcopy(rslds)
 
     # ---- PCA on the latent trajectory ----
-    pca = PCA(n_components=latent_dims)
+    pca = PCA(n_components=8)
     x_pc_numdims = pca.fit_transform(xhat_lem)   # (T, latent_dims)
+    print('shape of pca.components_', np.shape(pca.components_)) # (8,8) = (n_components, n_features). so each row is a pc, each column a 'feature' which is the original dimension
+
     x_pc_2 = x_pc_numdims[:, :2]                     # (T, 2)
     x_pc_3 = x_pc_numdims[:, :3]
-    W = pca.components_[:, :2]                # (latent_dims, 2) loading matrix
-    mu = np.mean(xhat_lem, axis=0)                # (latent_dims,)
+    W = pca.components_[:2, :].T                # (latent_dims, 2) loading matrix
+    W3 = pca.components_[:3, :].T
+    # mu = np.mean(xhat_lem, axis=0)                # (latent_dims,)
+    mu = pca.mean_
 
     # ---- PLOTS ----
     if date:
@@ -307,8 +316,17 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     if testing:
         output_folder = Path(f"output/{key}/testing")
     else:
+        if plot_type == 'svg':
+            key = f"{key}/svg"
+
         if path_type:
             key = f"{key}/{path_type}"
+
+        if m2_sensor:
+            if sensor_length:
+                key = f"{key}/{m2_sensor}_{sensor_length}"
+            else:
+                key = f"{key}/{m2_sensor}_2s" # default when sensor_length is None is 2 seconds
 
         if trial_selection:
             key = f"{key}/{trial_selection}"
@@ -320,6 +338,9 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
 
         if m2_correct_only:
             key = f"{key}/correct_only"
+
+        if m2_miss_only:
+            key = f"{key}/miss_only"
 
         if layer:
             key = f"{key}/{layer}"
@@ -343,12 +364,15 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
             fig0.savefig(output_folder / "spikes.png")
 
     elif type is DataType.M2:
-        fig0, axes0 = trace_sanity_check_m2(for_trace)
-        fig0.suptitle(f"Calcium Trace of Neurons: {key}")  
-        if plot_type == "svg":
-            fig0.savefig(output_folder / "calcium_trace.svg", format="svg")
+        if m2_sensor:
+            pass
         else:
-            fig0.savefig(output_folder / "calcium_trace.png")
+            fig0, axes0 = trace_sanity_check_m2(for_trace)
+            fig0.suptitle(f"Calcium Trace of Neurons: {key}")  
+            if plot_type == "svg":
+                fig0.savefig(output_folder / "calcium_trace.svg", format="svg")
+            else:
+                fig0.savefig(output_folder / "calcium_trace.png")
 
     elif type is DataType.RbpCre:
         fig0, axes0 = trace_sanity_check(for_trace, random_seed=42)
@@ -720,28 +744,36 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
 
             
         else:
-            fig1d, _ = plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_states, bin_size)
+            if m2_sensor is None:
+                fig1d, _ = plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_states, bin_size)
+                fig1d.tight_layout(pad=2)
+                if plot_type == "svg":
+                    fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
+                else:
+                    fig1d.savefig(output_folder / "most_likely_state.png")
 
-            fig1d.tight_layout(pad=2)
-
-            fig2d, ax2d = plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size)
-            ax2d.set_title(f"Mode Most Likely State - 3s before Lick to 3s after Lick: \n{key}")
+            fig2d, ax2d = plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size, m2_sensor=m2_sensor)
+            if m2_sensor:
+                ax2d.set_title(f"Mode Most Likely State - 1s after {m2_sensor}: \n{key}")
+            else:
+                ax2d.set_title(f"Mode Most Likely State - 3s before Lick to 3s after Lick: \n{key}")
             ax2d.set_xlabel("Time Index")
             ax2d.set_ylabel("Most Likely State")
             ax2d.legend()
             fig2d.tight_layout(pad=2)
 
-            fig2000, ax2000 = plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size)
-            ax2000.set_title(f"Probability of Discrete States Aligned Around Lick: \n{key}")
+            fig2000, ax2000 = plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size, m2_sensor=m2_sensor)
+            if m2_sensor:
+                ax2000.set_title(f"Probability of Discrete States - 1s after {m2_sensor}: \n{key}")
+            else:
+                ax2000.set_title(f"Probability of Discrete States Aligned Around Lick: \n{key}")
             fig2000.tight_layout(pad=2)
 
             if plot_type == "svg":
-                fig1d.savefig(output_folder / "most_likely_state.svg", format='svg')
                 fig2d.savefig(output_folder / "most_likely_state_lickonly.svg", format='svg')
                 fig2000.savefig(output_folder / "state_probabilities.svg", format='svg')
 
             else:
-                fig1d.savefig(output_folder / "most_likely_state.png")
                 fig2d.savefig(output_folder / "most_likely_state_lickonly.png")
                 fig2000.savefig(output_folder / "state_probabilities.png")
 
@@ -839,6 +871,35 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
     else:
         fig6.savefig(output_folder / "superimposedtraj.png")
 
+
+    # ------ 3D TRAJECTORY & FLOWFIELD SUPERIMPOSED -------
+    fig4000 = plot_pca_flowfield_3d(rslds_lem, W3, mu, plot_key, npts=6, colors=colors)
+    fig4000 = plot_trajectory_3d(zhat_lem, x_pc_3, fig=fig4000, colors=colors)
+
+    fig4000.update_layout(
+        title=f"Inferred 3D Flow Field & Trajectory Superimposed in PC Space: \n {key}",    
+        scene=dict(
+            xaxis_title='PC1',
+            yaxis_title='PC2',
+            zaxis_title='PC3',
+            aspectmode='data'
+        ),
+        margin=dict(l=0, r=0, b=0, t=50),
+        autosize=True,
+        width=None
+    )
+
+    if plot_type == "svg":
+        fig4000.write_image(output_folder / "3d_superimposed.svg")
+    else:
+        fig4000.write_html(
+            output_folder / "3d_superimposed.html",
+            config={"responsive": True},
+            default_width="100%",
+            default_height="100%"
+        )
+
+    # --------- STATE SPECIFIC PLOTS -----------
     for i in range(disc_states):
         state_key = f"{key}/state{i}"
 

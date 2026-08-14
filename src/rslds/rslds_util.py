@@ -37,12 +37,22 @@ def plot_trajectory(z, x, ax=None, ls="-"):
     if ax is None:
         fig = plt.figure(figsize=(4, 4))
         ax = fig.gca()
+
+    seen = set()
     for start, stop in zip(zcps[:-1], zcps[1:]):
+        state = z[start]
+        color = colors[state % len(colors)]
+        label = f"State {state}" if state not in seen else None
+        seen.add(state)
         ax.plot(x[start:stop + 1, 0],
-                x[start:stop + 1, 1],
-                lw=1, ls=ls,
-                color=colors[z[start] % len(colors)],
-                alpha=1.0)
+                 x[start:stop + 1, 1],
+                 lw=1, ls=ls,
+                 color=color,
+                 alpha=1.0,
+                 label=label)
+        
+    ax.legend()
+
     return ax
 
 
@@ -61,12 +71,10 @@ def plot_trajectory_3d(z, x, fig=None, colors=None):
     print(type(colors))
     print(colors[0])
 
-    new_colors = [to_hex(c) for c in colors]
-
-    if new_colors is None:
-        # Default qualitative color palette if none is passed
-        warnings.warn("now defaulting to Plotly generic colors instead of rSLDS colors.")
-        new_colors = px.colors.qualitative.Plotly
+    if colors is None:
+        colors = px.colors.qualitative.Plotly
+    else:
+        colors = [to_hex(c) for c in colors]
 
     # Find change points where discrete state z transitions
     zcps = np.concatenate(([0], np.where(np.diff(z))[0] + 1, [z.size]))
@@ -79,7 +87,7 @@ def plot_trajectory_3d(z, x, fig=None, colors=None):
 
     for start, stop in zip(zcps[:-1], zcps[1:]):
         state = z[start]
-        color = new_colors[state % len(new_colors)]
+        color = colors[state % len(colors)]
         show_legend = state not in added_states
         added_states.add(state)
 
@@ -343,6 +351,70 @@ def plot_pca_flowfield(model, W, mu, plot_key,
     ax.set_title(f'Inferred Flow Field in PC Space (Laplace-EM): \n{plot_key}')
 
     return ax
+
+def plot_pca_flowfield_3d(model, W, mu, plot_key,
+                           xlim=(-4, 4), ylim=(-4, 4), zlim=(-4, 4),
+                           npts=8, cone_sizeref=1.5, alpha=0.8,
+                           fig=None, colors=None):
+    """
+    3D analogue of plot_pca_flowfield. Evaluates discrete-state boundaries
+    and dynamics on a 3D grid in PC space, back-projects to the full
+    D-dim latent space via x_full = W @ p + mu, and draws one Cone trace
+    per discrete state so it can be superimposed with plot_trajectory_3d.
+
+    W:  (D, 3) PCA loading matrix (pca.components_.T for 3 components)
+    mu: (D,) PCA mean (pca.mean_)
+    """
+    K = model.K
+
+    if colors is None:
+        colors = px.colors.qualitative.Plotly
+    else:
+        colors = [to_hex(c) for c in colors]
+
+    # 3D grid in PC space
+    xs = np.linspace(*xlim, npts)
+    ys = np.linspace(*ylim, npts)
+    zs = np.linspace(*zlim, npts)
+    X, Y, Z = np.meshgrid(xs, ys, zs, indexing='ij')
+    pc_grid = np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))  # (G, 3)
+
+    # Back-project grid to full latent space
+    x_full = pc_grid.dot(W.T) + mu  # (G, D)
+
+    # Discrete state at each grid point (same rule used to fit the model)
+    z = np.argmax(x_full.dot(model.transitions.Rs.T) + model.transitions.r, axis=1)
+
+    if fig is None:
+        fig = go.Figure()
+
+    for k in range(K):
+        A = model.dynamics.As[k]
+        b = model.dynamics.bs[k]
+
+        A_pc = W.T.dot(A).dot(W)                 # (3, 3)
+        b_pc = W.T.dot(A.dot(mu) + b - mu)        # (3,)
+        dpdt = pc_grid.dot(A_pc.T) + b_pc - pc_grid  # (G, 3)
+
+        zk = z == k
+        if zk.sum() == 0:
+            continue
+
+        color = colors[k % len(colors)]
+        fig.add_trace(go.Cone(
+            x=pc_grid[zk, 0], y=pc_grid[zk, 1], z=pc_grid[zk, 2],
+            u=dpdt[zk, 0], v=dpdt[zk, 1], w=dpdt[zk, 2],
+            colorscale=[[0, color], [1, color]],  # fake a solid color
+            showscale=False,
+            sizemode="absolute",
+            sizeref=cone_sizeref,
+            opacity=alpha,
+            name=f'Flow: State {k}',
+            legendgroup=f'State {k}',
+            showlegend=True,
+        ))
+    
+    return fig
 
 
 def eigs_timeconstants(model, state_idx, model_type: Literal["csv", None] = None, dim_idx=None):

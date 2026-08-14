@@ -23,33 +23,31 @@ if __name__=="__main__":
     interm_1357 = "0605"
     expert_1357 = "0626"
 
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=naive_1357, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=interm_1357, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=expert_1357, num_iters=50, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=naive_1357, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=interm_1357, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, date=expert_1357, bin_size=3)
 
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, m2_correct_only=True, date=naive_1357, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, m2_correct_only=True, date=interm_1357, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, m2_correct_only=True, date=expert_1357, num_iters=50, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, m2_correct_only=True, date=naive_1357, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, m2_correct_only=True, date=interm_1357, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, m2_correct_only=True, date=expert_1357, bin_size=3)
 
-    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", date=naive_1357, num_iters=50, bin_size=3)
-    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", date=interm_1357, num_iters=50, bin_size=3)
-    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", date=expert_1357, num_iters=50, bin_size=3)
+    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", date=naive_1357, bin_size=3)
+    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", date=interm_1357, bin_size=3)
+    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", date=expert_1357, bin_size=3)
 
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", m2_correct_only=True, date=naive_1357, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", m2_correct_only=True, date=interm_1357, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", m2_correct_only=True, date=expert_1357, num_iters=50, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", m2_correct_only=True, date=naive_1357, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", m2_correct_only=True, date=interm_1357, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="right", m2_correct_only=True, date=expert_1357, bin_size=3)
 
-    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", date=naive_1357, num_iters=50, bin_size=3)
-    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", date=interm_1357, num_iters=50, bin_size=3)
-    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", date=expert_1357, num_iters=50, bin_size=3)
+    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", date=naive_1357, bin_size=3)
+    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", date=interm_1357, bin_size=3)
+    # # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", date=expert_1357, bin_size=3)
 
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", m2_correct_only=True, date=naive_1357, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", m2_correct_only=True, date=interm_1357, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", m2_correct_only=True, date=expert_1357, num_iters=50, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", m2_correct_only=True, date=naive_1357, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", m2_correct_only=True, date=interm_1357, bin_size=3)
+    # run_rslds_pipeline(path_1357, disc_states, latent_dims, plot_1357, DataType.M2, trial_selection="left", m2_correct_only=True, date=expert_1357, bin_size=3)
 
     # plt.close('all')
-
-
 
 
     path_073723 = "data/dj/NeuronByDay_073723_qc_rescued.mat"
@@ -59,28 +57,63 @@ if __name__=="__main__":
     interm_073723 = "0424" 
     expert_073723 = "0501" # 83%
 
-    run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=naive_073723, testing=True, num_iters=5, bin_size=3)
-    run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=interm_073723, testing=True, num_iters=50, bin_size=3)
-    run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=expert_073723, testing=True, num_iters=50, bin_size=3)
 
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_correct_only=True, date=naive_073723, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_correct_only=True, date=interm_073723, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_correct_only=True, date=expert_073723, num_iters=50, bin_size=3)
+    for m2_correct_only in [True, False]:
+        run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=naive_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
+        run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=interm_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
+        run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=expert_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
 
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", date=naive_073723, num_iters=50, bin_size=3)
-    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", date=interm_073723, num_iters=50, bin_size=3)
-    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", date=expert_073723, num_iters=50, bin_size=3)
+    # for m2_sensor in ['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick']:
+    # for m2_sensor in ['WM1', 'CuePlayed', 'Lick']:
+    #     for trial_selection in [None, 'right', 'left']:
+    #         for m2_correct_only in [True, False]:
+    #             print("\n ------- RUNNING NAIVE, INTERM, EXPERT ON THE FOLLOWING: -------")
+    #             print(f"\n trial_selection: {trial_selection}")
+    #             print(f"\n m2_correct_only: {m2_correct_only}")
+    #             print(f"\n m2_sensor: {m2_sensor}")
 
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_correct_only=True, date=naive_073723, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_correct_only=True, date=interm_073723, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_correct_only=True, date=expert_073723, num_iters=50, bin_size=3)
+    #             run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=naive_073723, m2_sensor=m2_sensor, trial_selection=trial_selection, m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
+    #             run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=interm_073723, m2_sensor=m2_sensor, trial_selection=trial_selection, m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
+    #             run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=expert_073723, m2_sensor=m2_sensor, trial_selection=trial_selection, m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
 
-    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", date=naive_073723, num_iters=50, bin_size=3)
-    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", date=interm_073723, num_iters=50, bin_size=3)
-    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", date=expert_073723, num_iters=50, bin_size=3)
 
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_correct_only=True, date=naive_073723, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_correct_only=True, date=interm_073723, num_iters=50, bin_size=3)
-    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_correct_only=True, date=expert_073723, num_iters=50, bin_size=3)
+    # -------------- full set --------------
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=naive_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=interm_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=expert_073723, bin_size=3)
+
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_correct_only=True, date=naive_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_correct_only=True, date=interm_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_correct_only=True, date=expert_073723, bin_size=3)
+
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_miss_only=True, date=naive_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_miss_only=True, date=interm_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, m2_miss_only=True, date=expert_073723, bin_size=3)
+
+    # # -------------- right set --------------
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", date=naive_073723, bin_size=3)
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", date=interm_073723, bin_size=3)
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", date=expert_073723, bin_size=3)
+
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_correct_only=True, date=naive_073723, bin_size=3)
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_correct_only=True, date=interm_073723, bin_size=3)
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_correct_only=True, date=expert_073723, bin_size=3)
+
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_miss_only=True, date=naive_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_miss_only=True, date=interm_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="right", m2_miss_only=True, date=expert_073723, bin_size=3)
+
+    # # -------------- left set --------------
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", date=naive_073723, bin_size=3)
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", date=interm_073723, bin_size=3)
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", date=expert_073723, bin_size=3)
+
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_correct_only=True, date=naive_073723, bin_size=3)
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_correct_only=True, date=interm_073723, bin_size=3)
+    # # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_correct_only=True, date=expert_073723, bin_size=3)
+
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_miss_only=True, date=naive_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_miss_only=True, date=interm_073723, bin_size=3)
+    # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, trial_selection="left", m2_miss_only=True, date=expert_073723, bin_size=3)
 
     plt.close('all')

@@ -6,6 +6,7 @@ where xxxx is the date as MMDD. within each day there is 'SigD', which is the df
 
 import scipy.io
 import os
+import math
 import numpy as np
 import warnings
 import sys
@@ -70,24 +71,32 @@ from utils.utils import mat_to_dict
 
 def bin_sigd_m2(sigd, bin_size: int):
     """INPUT: sigd is a 2D array of (num_neurons, num_timesteps). bin_size is the number of timebins to average over. OUTPUT: binned_sigd is a 2D array of (num_neurons, num_timesteps/bin_size)"""
-    num_neurons = np.shape(sigd)[0]
-    num_timesteps = np.shape(sigd)[1]
-    num_bins = int(num_timesteps/bin_size)
-    binned_sigd = np.zeros((num_neurons, num_bins))
-    for i in range(num_neurons):
-        for j in range(num_bins):
-            start = j*bin_size
-            end = (j+1)*bin_size
-            binned_sigd[i,j] = np.mean(sigd[i,start:end])
+
+    if bin_size == 1:
+        binned_sigd = sigd
+    else:
+        num_neurons = np.shape(sigd)[0]
+        num_timesteps = np.shape(sigd)[1]
+        num_bins = int(num_timesteps/bin_size)
+        binned_sigd = np.zeros((num_neurons, num_bins))
+        for i in range(num_neurons):
+            for j in range(num_bins):
+                start = j*bin_size
+                end = (j+1)*bin_size
+                binned_sigd[i,j] = np.mean(sigd[i,start:end])
     
     return binned_sigd
 
-def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None] = None, m2_correct_only=False):
+def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None] = None, 
+                 m2_sensor: Literal['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick', None] = None, m2_correct_only=False, m2_miss_only=False, 
+                 sensor_length: Literal['1s', '1.5s', None] = None):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
             gonogo is a 1d array of indices that represent which trials are go trials or nogo trials.
     OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
             represented in one row for each neuron.
+
+    NOTE: default sensor_length is to use 2 seconds. if you set to '1s', then only uses 1 second.
     """
     # LOAD SIGD
     calcium = Path(data_path)
@@ -117,10 +126,21 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
     correct = np.int32(list(S['Correct']))
 
     eng.eval(f"WM1 = NeuronByDay.D{date}.S_WM1.eventFrameIdx;", nargout=0)
+    eng.eval(f"Gate = NeuronByDay.D{date}.S_GATE.eventFrameIdx;", nargout=0)
+    eng.eval(f"WM2 = NeuronByDay.D{date}.S_WM2.eventFrameIdx;", nargout=0)
+    eng.eval(f"CuePlayed = NeuronByDay.D{date}.S_CUE.eventFrameIdx;", nargout=0)
+    eng.eval(f"Lick = NeuronByDay.D{date}.S_LICK.eventFrameIdx;", nargout=0)
     eng.eval(f"frameTime = NeuronByDay.D{date}.S_WM1.frameTime;", nargout=0)
     eng.eval(f"Return = NeuronByDay.D{date}.S_RETURN.eventFrameIdx;", nargout=0)
-    
+    eng.eval(f"Fs = NeuronByDay.D{date}.S_WM1.fs;", nargout=0)
+
     wm1 = list(np.int32((eng.workspace['WM1'])))
+    gate = list(np.int32((eng.workspace['Gate'])))
+    wm2 = list(np.int32((eng.workspace['WM2'])))
+    cue = list(np.int32((eng.workspace['CuePlayed'])))
+    lick = list(np.int32((eng.workspace['Lick'])))
+    Fs = np.int32(eng.workspace['Fs'])
+
     ret = list(np.int32((eng.workspace['Return'])))
     frame_time = np.array(list((eng.workspace['frameTime'])))
 
@@ -129,52 +149,72 @@ def load_sigd_m2(data_path, date, trial_selection: Literal["right", "left", None
         warnings.warn("Length of Return and WM1 are not equal. Appending last frame time to Return to make them equal.")
 
     # IF: right or left trials only
-    if trial_selection:
-        keep_trial_idx = []
-        if trial_selection == "right":
-            if m2_correct_only:
-                keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 1 and correct[i] == 1]
-            else:
-                keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 1]
-        elif trial_selection == "left":
-            if m2_correct_only:
-                keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 0 and correct[i] == 1]
-            else:
-                keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 0]
+    
+    if trial_selection == "right":
+        if m2_correct_only:
+            keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 1 and correct[i] == 1]
+        elif m2_miss_only:
+            keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 1 and correct[i] == 0]
+        else:
+            keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 1]
+    elif trial_selection == "left":
+        if m2_correct_only:
+            keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 0 and correct[i] == 1]
+        elif m2_miss_only:
+            keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 0 and correct[i] == 0]
+        else:
+            keep_trial_idx = [i for i in range(len(instructed_turn)) if instructed_turn[i] == 0]
+    else:
+        if m2_correct_only:
+            keep_trial_idx = [i for i in range(len(correct)) if correct[i] == 1]
+        elif m2_miss_only:
+            keep_trial_idx = [i for i in range(len(correct)) if correct[i] == 0]
+        else:
+            keep_trial_idx = list(range(len(instructed_turn)))
 
+    if m2_sensor:
+        if m2_sensor == "WM1":
+            sensor = wm1
+        elif m2_sensor == "Gate":
+            sensor = gate
+        elif m2_sensor == "WM2":
+            sensor = wm2
+        elif m2_sensor == "CuePlayed":
+            sensor = cue
+        elif m2_sensor == "Lick": 
+            sensor = lick
+        else:
+            raise ValueError("You have provided a sensor name that does not exist for this freely-moving dataset.")
+
+        retain = []
+        for i in keep_trial_idx:
+            start = int(sensor[i])
+            if sensor_length == '1s':
+                end = int(sensor[i] + math.ceil(Fs)) # otherwise use the beginning of the next trial
+            elif sensor_length == '1.5s':
+                end = int(sensor[i] + math.ceil(Fs*1.5)) # otherwise use the beginning of the next trial
+            else:
+                end = int(sensor[i] + math.ceil(Fs*2))
+            retain.append(sigd[:, start:end])
+
+    else:
         retain = []
         for i in keep_trial_idx:
             start = int(wm1[i])
             if i == keep_trial_idx[-1]: # if this value is the last value in keep_trial_idx
                 end = int(frame_time[-1]) # use the last frame time as the end
             else:
-                end = int(wm1[i+1]) # otherwise use the beginning of the next trial 
+                end = int(ret[i]) # otherwise use the beginning of the next trial 
             retain.append(sigd[:, start:end])
 
-        sliced_sigd = np.hstack(retain) # stack the trials along the time axis
-        print('\n Shape of sliced_sigd:', np.shape(sliced_sigd))
+    sliced_sigd = np.hstack(retain) # stack the trials along the time axis
+    print('\n Shape of sliced_sigd:', np.shape(sliced_sigd))
+    print(f"\n trial_selection: {trial_selection}")
+    print(f"\n m2_correct_only: {m2_correct_only}")
+    print(f"\n m2_miss_only: {m2_miss_only}")
+    print(f"\n m2_sensor: {m2_sensor}")
 
-        return sliced_sigd, keep_trial_idx
-
-    # if: FULL TRIAL SET
-    else:
-        if m2_correct_only:
-            correct_trial_idx = [i for i in range(len(correct)) if correct[i] == 1]
-
-            retain = []
-            for i in correct_trial_idx:
-                start = int(wm1[i])
-                if i == correct_trial_idx[-1]: # if this value is the last value in keep_trial_idx
-                    end = int(frame_time[-1]) # use the last frame time as the end
-                else:
-                    end = int(wm1[i+1]) # otherwise use the beginning of the next trial 
-                retain.append(sigd[:, start:end])
-        
-            sliced_sigd = np.hstack(retain) # stack the trials along the time axis
-            print('\n Shape of sliced_sigd, correct_only for all trials:', np.shape(sliced_sigd))
-            return sliced_sigd, correct_trial_idx
-        else:
-            return sigd, list(range(len(instructed_turn))) # second return value is just a list of all trial indices, since we are not slicing the data
+    return sliced_sigd, keep_trial_idx
 
 
 def trace_sanity_check_m2(binned):
@@ -211,7 +251,7 @@ def load_trialbreak_m2(data_path, date):
     eng.eval(f"WM1 = NeuronByDay.D{date}.S_WM1.eventFrameIdx;", nargout=0)
     eng.eval(f"Gate = NeuronByDay.D{date}.S_GATE.eventFrameIdx;", nargout=0)
     eng.eval(f"WM2 = NeuronByDay.D{date}.S_WM2.eventFrameIdx;", nargout=0)
-    eng.eval(f"Cue = NeuronByDay.D{date}.S_CUE.eventFrameIdx;", nargout=0)
+    eng.eval(f"CuePlayed = NeuronByDay.D{date}.S_CUE.eventFrameIdx;", nargout=0)
     eng.eval(f"Lick = NeuronByDay.D{date}.S_LICK.eventFrameIdx;", nargout=0)
     eng.eval(f"Return = NeuronByDay.D{date}.S_RETURN.eventFrameIdx;", nargout=0)
     eng.eval(f"frameTime = NeuronByDay.D{date}.S_WM1.frameTime;", nargout=0)
@@ -220,7 +260,7 @@ def load_trialbreak_m2(data_path, date):
     wm1 = list(np.int32((eng.workspace['WM1'])))
     gate = list(np.int32((eng.workspace['Gate'])))
     wm2 = list(np.int32((eng.workspace['WM2'])))
-    cue = list(np.int32((eng.workspace['Cue'])))
+    cue = list(np.int32((eng.workspace['CuePlayed'])))
     lick = list(np.int32((eng.workspace['Lick'])))
     ret = list(np.int32((eng.workspace['Return'])))
     frame_time = np.array(list((eng.workspace['frameTime'])))
@@ -369,7 +409,7 @@ def plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_sta
             f"WM1={trial['WM1'] // bin_size}, "
             f"Gate={trial['Gate'] // bin_size}, "
             f"WM2={trial['WM2'] // bin_size}, "
-            f"Cue={trial['CuePlayed'] // bin_size}, "
+            f"CuePlayed={trial['CuePlayed'] // bin_size}, "
             f"Lick={trial['Lick'] // bin_size}, "
             f"Return={trial['Return'] // bin_size}"
         )
@@ -384,7 +424,7 @@ def plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_sta
                    lw=1.25, color='b', linestyle='--', label='WM2')
 
         ax.axvline((trial["CuePlayed"] // bin_size) - trial_start,
-                   lw=1.25, color='c', linestyle='--', label='Cue Played')
+                   lw=1.25, color='c', linestyle='--', label='CuePlayed')
 
         ax.axvline((trial["Lick"] // bin_size) - trial_start,
                    lw=1.25, color='m', linestyle='--', label='Lick')
@@ -399,12 +439,14 @@ def plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_sta
 
     return fig, axes
 
-def plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size):
+def plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, 
+                      bin_size, m2_sensor: Literal['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick', None] = None):
 
     # all original trials
     all_trials = trial_break
     retained_trials = []
     compressed_start = 0
+    print(f"Fs: {Fs}")
 
     for idx in retained_trial_idx:
         # cannot compute duration for the last original trial
@@ -439,29 +481,47 @@ def plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states
 
     fig, ax = plt.subplots(figsize=(10, 4))
 
-    retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
-    for i in range(len(retained_trials)):
-        trial = retained_trials[i]
-        trial_lick = trial["Lick"] // bin_size
-        before = int(trial_lick - ((3 * Fs) // bin_size))
-        after = int(trial_lick + ((3 * Fs) // bin_size))
-        zhat_retain = zhat_lem[before:after]
-        retain_zhat_list.append(zhat_retain)
+    if m2_sensor:
+        retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+        num_trials = len(retained_trials)
+        num_frames = len(zhat_lem)
+        frames_per_trial = int(num_frames // num_trials)
+        counter = 0
+        for i in range(len(retained_trials)):
+            zhat_retain = zhat_lem[counter:(counter + frames_per_trial)]
+            retain_zhat_list.append(zhat_retain)
+            counter += frames_per_trial
+        
+    else:
+        retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+        for i in range(len(retained_trials)):
+            trial = retained_trials[i]
+            trial_lick = trial["Lick"] // bin_size
+            before = int(trial_lick - ((3 * Fs) // bin_size))
+            after = int(trial_lick + ((3 * Fs) // bin_size))
+            zhat_retain = zhat_lem[before:after]
+            retain_zhat_list.append(zhat_retain)
 
     stack = np.stack(retain_zhat_list, axis=0)
     result = stats.mode(stack, axis=0)
     zhat_mode = result.mode.squeeze()
 
-    print("Successfully found mean zhat for full trial set.\n")
+    print("Successfully found mean zhat.\n")
 
     zhat_lem_sliced_plot(zhat_mode, ax, disc_states)
 
-    ax.axvline(((3*Fs) // bin_size), lw=1.25, color='r', linestyle='--', label='Lick')
+    if m2_sensor:
+        ax.axvline(0, lw=1.25, color='r', linestyle='--', label=m2_sensor)
+        padding = 2
+        ax.set_xlim(-padding, len(zhat_mode) - 1 + padding)
+    else:
+        ax.axvline(((3*Fs) // bin_size), lw=1.25, color='r', linestyle='--', label='Lick')
 
     return fig, ax
 
 
-def plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size):
+def plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size,
+                             m2_sensor: Literal['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick', None] = None):
 
     # all original trials
     all_trials = trial_break
@@ -501,14 +561,25 @@ def plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc
 
     fig, ax = plt.subplots(figsize=(10, 4))
 
-    retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
-    for i in range(len(retained_trials)):
-        trial = retained_trials[i]
-        trial_lick = trial["Lick"] // bin_size
-        before = int(trial_lick - ((3 * Fs) // bin_size))
-        after = int(trial_lick + ((3 * Fs) // bin_size))
-        zhat_retain = zhat_lem[before:after]
-        retain_zhat_list.append(zhat_retain)
+    if m2_sensor:
+        retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+        num_trials = len(retained_trials)
+        num_frames = len(zhat_lem)
+        frames_per_trial = int(num_frames // num_trials)
+        counter = 0
+        for i in range(len(retained_trials)):
+            zhat_retain = zhat_lem[counter:(counter + frames_per_trial)]
+            retain_zhat_list.append(zhat_retain)
+            counter += frames_per_trial
+    else:
+        retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+        for i in range(len(retained_trials)):
+            trial = retained_trials[i]
+            trial_lick = trial["Lick"] // bin_size
+            before = int(trial_lick - ((3 * Fs) // bin_size))
+            after = int(trial_lick + ((3 * Fs) // bin_size))
+            zhat_retain = zhat_lem[before:after]
+            retain_zhat_list.append(zhat_retain)
 
     stack = np.stack(retain_zhat_list, axis=0)
     
@@ -542,9 +613,14 @@ def plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc
     ax.set_xlabel("Frame")
     ax.set_ylabel("Probability")
     ax.set_ylim(0, 1)
-    ax.set_xlim(0, stack.shape[1])
 
-    ax.axvline(((3*Fs) // bin_size), lw=1.25, color='r', linestyle='--', label='Lick')
+    if m2_sensor:
+        ax.axvline(0, lw=1.25, color='r', linestyle='--', label=m2_sensor)
+        padding = 2
+        ax.set_xlim(-padding, stack.shape[1] + padding)
+    else:
+        ax.axvline(((3*Fs) // bin_size), lw=1.25, color='r', linestyle='--', label='Lick')
+        ax.set_xlim(0, stack.shape[1])
 
     ax.legend()
 
