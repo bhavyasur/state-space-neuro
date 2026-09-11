@@ -439,6 +439,87 @@ def plot_zhatlem_indivtrials(trial_break, zhat_lem, retained_trial_idx, disc_sta
 
     return fig, axes
 
+def plot_zhatlem_cue(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, 
+                      bin_size, m2_sensor: Literal['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick', None] = None):
+
+    # all original trials
+    all_trials = trial_break
+    retained_trials = []
+    compressed_start = 0
+    print(f"Fs: {Fs}")
+
+    for idx in retained_trial_idx:
+        # cannot compute duration for the last original trial
+        if idx >= len(all_trials) - 1:
+            continue
+
+        trial_dict = all_trials[idx]
+
+        wm1 = int(trial_dict["WM1"][0])
+        gate = int(trial_dict["Gate"][0])
+        wm2 = int(trial_dict["WM2"][0])
+        cue = int(trial_dict["CuePlayed"][0])
+        lick = int(trial_dict["Lick"][0])
+        ret = int(trial_dict["Return"][0])
+
+        next_wm1 = int(all_trials[idx + 1]["WM1"][0])
+        duration = ret - wm1
+        # duration = next_wm1 - wm1
+
+        retained_trials.append({
+            "original_idx": idx,
+            "trial_start": compressed_start,
+            "trial_end": compressed_start + duration,
+            "WM1": compressed_start,
+            "Gate": compressed_start + (gate - wm1),
+            "WM2": compressed_start + (wm2 - wm1),
+            "CuePlayed": compressed_start + (cue - wm1),
+            "Lick": compressed_start + (lick - wm1),
+            "Return": compressed_start + (ret - wm1),
+        })
+        compressed_start += duration
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    if m2_sensor:
+        retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+        num_trials = len(retained_trials)
+        num_frames = len(zhat_lem)
+        frames_per_trial = int(num_frames // num_trials)
+        counter = 0
+        for i in range(len(retained_trials)):
+            zhat_retain = zhat_lem[counter:(counter + frames_per_trial)]
+            retain_zhat_list.append(zhat_retain)
+            counter += frames_per_trial
+        
+    else:
+        retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+        for i in range(len(retained_trials)):
+            trial = retained_trials[i]
+            trial_cue = trial["CuePlayed"] // bin_size
+            before = int(trial_cue - ((3 * Fs) // bin_size))
+            after = int(trial_cue + ((3 * Fs) // bin_size))
+            zhat_retain = zhat_lem[before:after]
+            retain_zhat_list.append(zhat_retain)
+
+    stack = np.stack(retain_zhat_list, axis=0)
+    result = stats.mode(stack, axis=0)
+    zhat_mode = result.mode.squeeze()
+
+    print("Successfully found mean zhat.\n")
+
+    zhat_lem_sliced_plot(zhat_mode, ax, disc_states)
+
+    if m2_sensor:
+        ax.axvline(0, lw=1.25, color='r', linestyle='--', label=m2_sensor)
+        padding = 2
+        ax.set_xlim(-padding, len(zhat_mode) - 1 + padding)
+    else:
+        ax.axvline(((3*Fs) // bin_size), lw=1.25, color='r', linestyle='--', label='Cue')
+
+    return fig, ax
+
+
 def plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, 
                       bin_size, m2_sensor: Literal['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick', None] = None):
 
@@ -520,7 +601,113 @@ def plot_zhatlem_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states
     return fig, ax
 
 
-def plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size,
+def plot_zhatlem_probability_cue(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size,
+                             m2_sensor: Literal['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick', None] = None):
+
+    # all original trials
+    all_trials = trial_break
+    retained_trials = []
+    compressed_start = 0
+
+    for idx in retained_trial_idx:
+        # cannot compute duration for the last original trial
+        if idx >= len(all_trials) - 1:
+            continue
+
+        trial_dict = all_trials[idx]
+
+        wm1 = int(trial_dict["WM1"][0])
+        gate = int(trial_dict["Gate"][0])
+        wm2 = int(trial_dict["WM2"][0])
+        cue = int(trial_dict["CuePlayed"][0])
+        lick = int(trial_dict["Lick"][0])
+        ret = int(trial_dict["Return"][0])
+
+        next_wm1 = int(all_trials[idx + 1]["WM1"][0])
+        duration = ret - wm1
+        # duration = next_wm1 - wm1
+
+        retained_trials.append({
+            "original_idx": idx,
+            "trial_start": compressed_start,
+            "trial_end": compressed_start + duration,
+            "WM1": compressed_start,
+            "Gate": compressed_start + (gate - wm1),
+            "WM2": compressed_start + (wm2 - wm1),
+            "CuePlayed": compressed_start + (cue - wm1),
+            "Lick": compressed_start + (lick - wm1),
+            "Return": compressed_start + (ret - wm1),
+        })
+        compressed_start += duration
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    if m2_sensor:
+        retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+        num_trials = len(retained_trials)
+        num_frames = len(zhat_lem)
+        frames_per_trial = int(num_frames // num_trials)
+        counter = 0
+        for i in range(len(retained_trials)):
+            zhat_retain = zhat_lem[counter:(counter + frames_per_trial)]
+            retain_zhat_list.append(zhat_retain)
+            counter += frames_per_trial
+    else:
+        retain_zhat_list = [] # will contain sublists of the sliced zhat_lem you keep from each trial (1s before lick, 2s after lick)
+        for i in range(len(retained_trials)):
+            trial = retained_trials[i]
+            trial_cue = trial["CuePlayed"] // bin_size
+            before = int(trial_cue - ((3 * Fs) // bin_size))
+            after = int(trial_cue + ((3 * Fs) // bin_size))
+            zhat_retain = zhat_lem[before:after]
+            retain_zhat_list.append(zhat_retain)
+
+    stack = np.stack(retain_zhat_list, axis=0)
+    
+    print("\n Number of trials:", stack.shape[0])
+    print("\n Frames per trial:", stack.shape[1])
+
+    # probability of each state at each frame
+
+    new_arr = np.zeros(
+        (disc_states, stack.shape[1]),
+        dtype=float
+    )
+
+    for state in range(disc_states):
+
+        new_arr[state, :] = np.mean(
+            stack == state,
+            axis=0
+        )
+
+    for state in range(disc_states):
+
+        ax.plot(
+            np.arange(stack.shape[1]),
+            new_arr[state, :],
+            linewidth=2,
+            label=f"State {state}",
+            color=colors[state % len(colors)]
+        )
+
+    ax.set_xlabel("Frame")
+    ax.set_ylabel("Probability")
+    ax.set_ylim(0, 1)
+
+    if m2_sensor:
+        ax.axvline(0, lw=1.25, color='r', linestyle='--', label=m2_sensor)
+        padding = 2
+        ax.set_xlim(-padding, stack.shape[1] + padding)
+    else:
+        ax.axvline(((3*Fs) // bin_size), lw=1.25, color='r', linestyle='--', label='Cue')
+        ax.set_xlim(0, stack.shape[1])
+
+    ax.legend()
+
+    return fig, ax
+
+def plot_zhatlem_probability_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size,
                              m2_sensor: Literal['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick', None] = None):
 
     # all original trials

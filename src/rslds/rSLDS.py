@@ -23,7 +23,7 @@ from src.gcamp8.gcamp8_load_util import ( load_dfoverf_dendrite, full_session_de
                                          trace_sanity_check_dendrite, session_concat_pipeline, spikes_smooth, load_trialbreak_dendrite, 
                                          gonogotrials_sliced_dendrite, load_trialtype_idx_dendrite, behavioral_plot_dendrite )
 from src.m2.m2_load_util import ( load_sigd_m2, trace_sanity_check_m2, bin_sigd_m2, plot_zhatlem_indivtrials, load_trialbreak_m2,
-                                 plot_zhatlem_lick, plot_zhatlem_probability, slice_zhatlem_for_trajectory )
+                                 plot_zhatlem_lick, plot_zhatlem_probability_cue, plot_zhatlem_probability_lick, plot_zhatlem_cue, slice_zhatlem_for_trajectory )
 from src.rslds.rslds_util import ( plot_trajectory, bin_smooth, plot_pca_flowfield, 
                                   eigs_timeconstants, plot_cv_heatmap, select_trial_from_trial_break,
                                   softplus, single_neuron_contribution, most_likely_state_plot, trial_average_pc, trial_average_zhat, 
@@ -171,9 +171,9 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
             if layer:
                 print(f"Loaded data for layer {layer}.\n")
             go_idx, nogo_idx = load_trialtype_idx_l23(raw_data)
-            full, trial_break_sliced = full_session_trialsliced_l23(dfoverf)
-            go_trials = gonogotrials_sliced_l23(dfoverf, go_idx)
-            nogo_trials = gonogotrials_sliced_l23(dfoverf, nogo_idx)
+            full, trial_break_sliced = full_session_trialsliced_l23(dfoverf, bin_size=bin_size)
+            go_trials = gonogotrials_sliced_l23(dfoverf, go_idx, bin_size=bin_size)
+            nogo_trials = gonogotrials_sliced_l23(dfoverf, nogo_idx, bin_size=bin_size)
 
             if trial_selection == "go":
                 data = go_trials.T.astype(int)
@@ -344,6 +344,9 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
 
         if layer:
             key = f"{key}/{layer}"
+
+        if bin_size:
+            key = f"{key}/bin_size{bin_size}"
 
         if roi:
             output_folder = Path(f"output/{key}/{disc_states}states_{latent_dims}dims_roi{roi}")
@@ -718,7 +721,7 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
 
                     # MODE PLOT AROUND LICK
                     fig2, ax2 = plot_zhatlem_lick(trial_break, zhat_sliced, Fs, dupe_retained_trial_idx, disc_states, bin_size)
-                    ax2.set_title(f"Mode Most Likely State - 3s before Lick to 3s after Lick: \n{label2}")
+                    ax2.set_title(f"Mode Most Likely State - 3s before Cue to 3s after Lick: \n{label2}")
                     ax2.set_xlabel("Time Index")
                     ax2.set_ylabel("Most Likely State")
                     ax2.legend()
@@ -726,7 +729,7 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
 
                     # PROBABILITY PLOT AROUND LICK
 
-                    fig3, ax3 = plot_zhatlem_probability(trial_break, zhat_sliced, Fs, dupe_retained_trial_idx, disc_states, bin_size)
+                    fig3, ax3 = plot_zhatlem_probability_lick(trial_break, zhat_sliced, Fs, dupe_retained_trial_idx, disc_states, bin_size)
                     ax3.set_title(f"Probability of Discrete States Aligned Around Lick: \n{label2}")
                     fig3.tight_layout(pad=2)
 
@@ -756,26 +759,46 @@ def run_rslds_pipeline(raw_data, disc_states, latent_dims, plot_key, type: DataT
             if m2_sensor:
                 ax2d.set_title(f"Mode Most Likely State - 1s after {m2_sensor}: \n{key}")
             else:
-                ax2d.set_title(f"Mode Most Likely State - 3s before Lick to 3s after Lick: \n{key}")
+                ax2d.set_title(f"Mode Most Likely State - 3s before Cue to 3s after Cue: \n{key}")
             ax2d.set_xlabel("Time Index")
             ax2d.set_ylabel("Most Likely State")
             ax2d.legend()
             fig2d.tight_layout(pad=2)
 
-            fig2000, ax2000 = plot_zhatlem_probability(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size, m2_sensor=m2_sensor)
+            fig2e, ax2e = plot_zhatlem_cue(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size, m2_sensor=m2_sensor)
+            if m2_sensor:
+                ax2e.set_title(f"Mode Most Likely State - 1s after {m2_sensor}: \n{key}")
+            else:
+                ax2e.set_title(f"Mode Most Likely State - 3s before Cue to 3s after Cue: \n{key}")
+            ax2e.set_xlabel("Time Index")
+            ax2e.set_ylabel("Most Likely State")
+            ax2e.legend()
+            fig2e.tight_layout(pad=2)
+
+            fig2000, ax2000 = plot_zhatlem_probability_cue(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size, m2_sensor=m2_sensor)
             if m2_sensor:
                 ax2000.set_title(f"Probability of Discrete States - 1s after {m2_sensor}: \n{key}")
             else:
-                ax2000.set_title(f"Probability of Discrete States Aligned Around Lick: \n{key}")
+                ax2000.set_title(f"Probability of Discrete States Aligned Around Cue: \n{key}")
             fig2000.tight_layout(pad=2)
+
+            fig2000a, ax2000a = plot_zhatlem_probability_lick(trial_break, zhat_lem, Fs, retained_trial_idx, disc_states, bin_size, m2_sensor=m2_sensor)
+            if m2_sensor:
+                ax2000a.set_title(f"Probability of Discrete States - 1s after {m2_sensor}: \n{key}")
+            else:
+                ax2000a.set_title(f"Probability of Discrete States Aligned Around Lick: \n{key}")
+            fig2000a.tight_layout(pad=2)
 
             if plot_type == "svg":
                 fig2d.savefig(output_folder / "most_likely_state_lickonly.svg", format='svg')
-                fig2000.savefig(output_folder / "state_probabilities.svg", format='svg')
-
+                fig2e.savefig(output_folder / "most_likely_state_cueonly.svg", format='svg')
+                fig2000.savefig(output_folder / "state_probabilities_cueonly.svg", format='svg')
+                fig2000a.savefig(output_folder / "state_probabilities_lickonly.svg", format='svg')
             else:
                 fig2d.savefig(output_folder / "most_likely_state_lickonly.png")
-                fig2000.savefig(output_folder / "state_probabilities.png")
+                fig2e.savefig(output_folder / "most_likely_state_cueonly.png")
+                fig2000.savefig(output_folder / "state_probabilities_cueonly.png")
+                fig2000a.savefig(output_folder / "state_probabilities_lickonly.png")
 
     else:
         fig1d, ax1d = plt.subplots(figsize=(10, 4))

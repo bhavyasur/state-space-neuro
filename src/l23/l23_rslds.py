@@ -131,139 +131,215 @@ if __name__=="__main__":
     expert_nogo6 = "data/shivam/Bessel_250_340/0730DR/Expert/NOGO"
     plot_expert_nogo6 = "Bessel_250_340_0730DR/Expert_NOGO"
 
+    gauss_l2_in = "data/shivam/Gaussian_Control/L2/In"
+    plot_gauss_l2_in = "Gaussian_Control/L2_In"
+
+    gauss_l3_in = "data/shivam/Gaussian_Control/L3/In"
+    plot_gauss_l3_in = "Gaussian_Control/L3_In"
+
+    gauss_l2_out = "data/shivam/Gaussian_Control/L2/Out"
+    plot_gauss_l2_out = "Gaussian_Control/L2_Out"
+
+    gauss_l3_out = "data/shivam/Gaussian_Control/L3/Out"
+    plot_gauss_l3_out = "Gaussian_Control/L3_Out"
+
+
+
+    # # GAUSSIAN
+    
+    # # full trials
+
+    # run_rslds_pipeline(gauss_l2_in, disc_states, latent_dims, plot_gauss_l2_in, type=DataType.L23, l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l3_in, disc_states, latent_dims, plot_gauss_l3_in,  type=DataType.L23, l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l2_out, disc_states, latent_dims, plot_gauss_l2_out, type=DataType.L23, l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l3_out, disc_states, latent_dims, plot_gauss_l3_out, type=DataType.L23, l23_type="bessel", num_iters=50)
+
+    # run_rslds_pipeline(gauss_l2_in, disc_states, latent_dims, plot_gauss_l2_in, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l3_in, disc_states, latent_dims, plot_gauss_l3_in,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l2_out, disc_states, latent_dims, plot_gauss_l2_out, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l3_out, disc_states, latent_dims, plot_gauss_l3_out, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+
+    # # go trials
+
+    # run_rslds_pipeline(gauss_l2_in, disc_states, latent_dims, plot_gauss_l2_in, type=DataType.L23, trial_selection="go",  l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l3_in, disc_states, latent_dims, plot_gauss_l3_in,  type=DataType.L23, trial_selection="go",  l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l2_out, disc_states, latent_dims, plot_gauss_l2_out, type=DataType.L23, trial_selection="go",  l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l3_out, disc_states, latent_dims, plot_gauss_l3_out, type=DataType.L23, trial_selection="go",  l23_type="bessel", num_iters=50)
+
+    # run_rslds_pipeline(gauss_l2_in, disc_states, latent_dims, plot_gauss_l2_in, type=DataType.L23, trial_selection="go",  l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l3_in, disc_states, latent_dims, plot_gauss_l3_in,  type=DataType.L23, trial_selection="go",  l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l2_out, disc_states, latent_dims, plot_gauss_l2_out, type=DataType.L23, trial_selection="go",  l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l3_out, disc_states, latent_dims, plot_gauss_l3_out, type=DataType.L23, trial_selection="go",  l23_type="bessel", plot_type='svg', num_iters=50)
+
+    # # nogo trials
+
+    # run_rslds_pipeline(gauss_l2_in, disc_states, latent_dims, plot_gauss_l2_in, type=DataType.L23, trial_selection="nogo",  l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l3_in, disc_states, latent_dims, plot_gauss_l3_in,  type=DataType.L23, trial_selection="nogo",  l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l2_out, disc_states, latent_dims, plot_gauss_l2_out, type=DataType.L23, trial_selection="nogo",  l23_type="bessel", num_iters=50)
+    # run_rslds_pipeline(gauss_l3_out, disc_states, latent_dims, plot_gauss_l3_out, type=DataType.L23, trial_selection="nogo",  l23_type="bessel", num_iters=50)
+
+    # run_rslds_pipeline(gauss_l2_in, disc_states, latent_dims, plot_gauss_l2_in, type=DataType.L23, trial_selection="nogo",  l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l3_in, disc_states, latent_dims, plot_gauss_l3_in,  type=DataType.L23, trial_selection="nogo",  l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l2_out, disc_states, latent_dims, plot_gauss_l2_out, type=DataType.L23, trial_selection="nogo",  l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(gauss_l3_out, disc_states, latent_dims, plot_gauss_l3_out, type=DataType.L23, trial_selection="nogo",  l23_type="bessel", plot_type='svg', num_iters=50)
+
 
     
 
-    # SET 1
+    # # SET 1 BINNED
 
     # full trials
-    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1,  type=DataType.L23, l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, l23_type="bessel", bin_size=2, num_iters=50)
 
     # go trials
-    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1,  type=DataType.L23, trial_selection="go", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", bin_size=2, num_iters=50)
 
     # nogo trials
-    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-
-
-    # SET 2
+    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", bin_size=2, num_iters=50)
 
     # full trials
-    run_rslds_pipeline(naive_go2, disc_states, latent_dims, plot_naive_go2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go2, disc_states, latent_dims, plot_intermediate_go2,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go2, disc_states, latent_dims, plot_expert_go2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo2, disc_states, latent_dims, plot_naive_nogo2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo2, disc_states, latent_dims, plot_intermediate_nogo2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo2, disc_states, latent_dims, plot_expert_nogo2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1,  type=DataType.L23, l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
 
     # go trials
-    run_rslds_pipeline(naive_go2, disc_states, latent_dims, plot_naive_go2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go2, disc_states, latent_dims, plot_intermediate_go2,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go2, disc_states, latent_dims, plot_expert_go2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo2, disc_states, latent_dims, plot_naive_nogo2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo2, disc_states, latent_dims, plot_intermediate_nogo2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo2, disc_states, latent_dims, plot_expert_nogo2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
 
     # nogo trials
-    run_rslds_pipeline(naive_go2, disc_states, latent_dims, plot_naive_go2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go2, disc_states, latent_dims, plot_intermediate_go2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go2, disc_states, latent_dims, plot_expert_go2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo2, disc_states, latent_dims, plot_naive_nogo2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo2, disc_states, latent_dims, plot_intermediate_nogo2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo2, disc_states, latent_dims, plot_expert_nogo2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    run_rslds_pipeline(naive_go1, disc_states, latent_dims, plot_naive_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_go1, disc_states, latent_dims, plot_intermediate_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_go1, disc_states, latent_dims, plot_expert_go1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(naive_nogo1, disc_states, latent_dims, plot_naive_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(intermediate_nogo1, disc_states, latent_dims, plot_intermediate_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
+    run_rslds_pipeline(expert_nogo1, disc_states, latent_dims, plot_expert_nogo1, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', bin_size=2, num_iters=50)
 
-    # SET 3
 
-    # full trials
-    run_rslds_pipeline(naive_go3, disc_states, latent_dims, plot_naive_go3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go3, disc_states, latent_dims, plot_intermediate_go3,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go3, disc_states, latent_dims, plot_expert_go3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo3, disc_states, latent_dims, plot_naive_nogo3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo3, disc_states, latent_dims, plot_intermediate_nogo3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo3, disc_states, latent_dims, plot_expert_nogo3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # # SET 2
 
-    # go trials
-    run_rslds_pipeline(naive_go3, disc_states, latent_dims, plot_naive_go3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go3, disc_states, latent_dims, plot_intermediate_go3,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go3, disc_states, latent_dims, plot_expert_go3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo3, disc_states, latent_dims, plot_naive_nogo3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo3, disc_states, latent_dims, plot_intermediate_nogo3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo3, disc_states, latent_dims, plot_expert_nogo3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # # full trials
+    # run_rslds_pipeline(naive_go2, disc_states, latent_dims, plot_naive_go2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go2, disc_states, latent_dims, plot_intermediate_go2,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go2, disc_states, latent_dims, plot_expert_go2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo2, disc_states, latent_dims, plot_naive_nogo2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo2, disc_states, latent_dims, plot_intermediate_nogo2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo2, disc_states, latent_dims, plot_expert_nogo2, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
 
-    # nogo trials
-    run_rslds_pipeline(naive_go3, disc_states, latent_dims, plot_naive_go3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go3, disc_states, latent_dims, plot_intermediate_go3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go3, disc_states, latent_dims, plot_expert_go3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo3, disc_states, latent_dims, plot_naive_nogo3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo3, disc_states, latent_dims, plot_intermediate_nogo3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo3, disc_states, latent_dims, plot_expert_nogo3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # # go trials
+    # run_rslds_pipeline(naive_go2, disc_states, latent_dims, plot_naive_go2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go2, disc_states, latent_dims, plot_intermediate_go2,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go2, disc_states, latent_dims, plot_expert_go2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo2, disc_states, latent_dims, plot_naive_nogo2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo2, disc_states, latent_dims, plot_intermediate_nogo2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo2, disc_states, latent_dims, plot_expert_nogo2, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
 
-    # SET 5
+    # # nogo trials
+    # run_rslds_pipeline(naive_go2, disc_states, latent_dims, plot_naive_go2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go2, disc_states, latent_dims, plot_intermediate_go2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go2, disc_states, latent_dims, plot_expert_go2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo2, disc_states, latent_dims, plot_naive_nogo2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo2, disc_states, latent_dims, plot_intermediate_nogo2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo2, disc_states, latent_dims, plot_expert_nogo2, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
 
-    # full trials
-    run_rslds_pipeline(naive_go5, disc_states, latent_dims, plot_naive_go5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go5, disc_states, latent_dims, plot_intermediate_go5,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go5, disc_states, latent_dims, plot_expert_go5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo5, disc_states, latent_dims, plot_naive_nogo5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo5, disc_states, latent_dims, plot_intermediate_nogo5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo5, disc_states, latent_dims, plot_expert_nogo5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # # SET 3
 
-    # go trials
-    run_rslds_pipeline(naive_go5, disc_states, latent_dims, plot_naive_go5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go5, disc_states, latent_dims, plot_intermediate_go5,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go5, disc_states, latent_dims, plot_expert_go5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo5, disc_states, latent_dims, plot_naive_nogo5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo5, disc_states, latent_dims, plot_intermediate_nogo5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo5, disc_states, latent_dims, plot_expert_nogo5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # # full trials
+    # run_rslds_pipeline(naive_go3, disc_states, latent_dims, plot_naive_go3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go3, disc_states, latent_dims, plot_intermediate_go3,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go3, disc_states, latent_dims, plot_expert_go3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo3, disc_states, latent_dims, plot_naive_nogo3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo3, disc_states, latent_dims, plot_intermediate_nogo3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo3, disc_states, latent_dims, plot_expert_nogo3, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
 
-    # nogo trials
-    run_rslds_pipeline(naive_go5, disc_states, latent_dims, plot_naive_go5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go5, disc_states, latent_dims, plot_intermediate_go5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go5, disc_states, latent_dims, plot_expert_go5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo5, disc_states, latent_dims, plot_naive_nogo5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo5, disc_states, latent_dims, plot_intermediate_nogo5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo5, disc_states, latent_dims, plot_expert_nogo5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # # go trials
+    # run_rslds_pipeline(naive_go3, disc_states, latent_dims, plot_naive_go3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go3, disc_states, latent_dims, plot_intermediate_go3,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go3, disc_states, latent_dims, plot_expert_go3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo3, disc_states, latent_dims, plot_naive_nogo3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo3, disc_states, latent_dims, plot_intermediate_nogo3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo3, disc_states, latent_dims, plot_expert_nogo3, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
 
-    # SET 6
+    # # nogo trials
+    # run_rslds_pipeline(naive_go3, disc_states, latent_dims, plot_naive_go3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go3, disc_states, latent_dims, plot_intermediate_go3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go3, disc_states, latent_dims, plot_expert_go3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo3, disc_states, latent_dims, plot_naive_nogo3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo3, disc_states, latent_dims, plot_intermediate_nogo3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo3, disc_states, latent_dims, plot_expert_nogo3, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
 
-    # full trials
-    run_rslds_pipeline(naive_go6, disc_states, latent_dims, plot_naive_go6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go6, disc_states, latent_dims, plot_intermediate_go6,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go6, disc_states, latent_dims, plot_expert_go6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo6, disc_states, latent_dims, plot_naive_nogo6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo6, disc_states, latent_dims, plot_intermediate_nogo6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo6, disc_states, latent_dims, plot_expert_nogo6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # # SET 5
 
-    # go trials
-    run_rslds_pipeline(naive_go6, disc_states, latent_dims, plot_naive_go6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go6, disc_states, latent_dims, plot_intermediate_go6,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go6, disc_states, latent_dims, plot_expert_go6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo6, disc_states, latent_dims, plot_naive_nogo6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo6, disc_states, latent_dims, plot_intermediate_nogo6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo6, disc_states, latent_dims, plot_expert_nogo6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # # full trials
+    # run_rslds_pipeline(naive_go5, disc_states, latent_dims, plot_naive_go5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go5, disc_states, latent_dims, plot_intermediate_go5,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go5, disc_states, latent_dims, plot_expert_go5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo5, disc_states, latent_dims, plot_naive_nogo5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo5, disc_states, latent_dims, plot_intermediate_nogo5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo5, disc_states, latent_dims, plot_expert_nogo5, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
 
-    # nogo trials
-    run_rslds_pipeline(naive_go6, disc_states, latent_dims, plot_naive_go6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_go6, disc_states, latent_dims, plot_intermediate_go6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_go6, disc_states, latent_dims, plot_expert_go6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(naive_nogo6, disc_states, latent_dims, plot_naive_nogo6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(intermediate_nogo6, disc_states, latent_dims, plot_intermediate_nogo6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
-    run_rslds_pipeline(expert_nogo6, disc_states, latent_dims, plot_expert_nogo6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # # go trials
+    # run_rslds_pipeline(naive_go5, disc_states, latent_dims, plot_naive_go5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go5, disc_states, latent_dims, plot_intermediate_go5,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go5, disc_states, latent_dims, plot_expert_go5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo5, disc_states, latent_dims, plot_naive_nogo5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo5, disc_states, latent_dims, plot_intermediate_nogo5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo5, disc_states, latent_dims, plot_expert_nogo5, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+
+    # # nogo trials
+    # run_rslds_pipeline(naive_go5, disc_states, latent_dims, plot_naive_go5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go5, disc_states, latent_dims, plot_intermediate_go5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go5, disc_states, latent_dims, plot_expert_go5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo5, disc_states, latent_dims, plot_naive_nogo5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo5, disc_states, latent_dims, plot_intermediate_nogo5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo5, disc_states, latent_dims, plot_expert_nogo5, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+
+    # # SET 6
+
+    # # full trials
+    # run_rslds_pipeline(naive_go6, disc_states, latent_dims, plot_naive_go6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go6, disc_states, latent_dims, plot_intermediate_go6,  type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go6, disc_states, latent_dims, plot_expert_go6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo6, disc_states, latent_dims, plot_naive_nogo6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo6, disc_states, latent_dims, plot_intermediate_nogo6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo6, disc_states, latent_dims, plot_expert_nogo6, type=DataType.L23, l23_type="bessel", plot_type='svg', num_iters=50)
+
+    # # go trials
+    # run_rslds_pipeline(naive_go6, disc_states, latent_dims, plot_naive_go6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go6, disc_states, latent_dims, plot_intermediate_go6,  type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go6, disc_states, latent_dims, plot_expert_go6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo6, disc_states, latent_dims, plot_naive_nogo6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo6, disc_states, latent_dims, plot_intermediate_nogo6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo6, disc_states, latent_dims, plot_expert_nogo6, type=DataType.L23, trial_selection="go", l23_type="bessel", plot_type='svg', num_iters=50)
+
+    # # nogo trials
+    # run_rslds_pipeline(naive_go6, disc_states, latent_dims, plot_naive_go6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_go6, disc_states, latent_dims, plot_intermediate_go6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_go6, disc_states, latent_dims, plot_expert_go6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(naive_nogo6, disc_states, latent_dims, plot_naive_nogo6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(intermediate_nogo6, disc_states, latent_dims, plot_intermediate_nogo6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
+    # run_rslds_pipeline(expert_nogo6, disc_states, latent_dims, plot_expert_nogo6, type=DataType.L23, trial_selection="nogo", l23_type="bessel", plot_type='svg', num_iters=50)
 
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------

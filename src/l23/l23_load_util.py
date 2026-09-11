@@ -91,7 +91,7 @@ def load_dfoverf_l23(data_path, layer: Literal["L2", "L3", None] = None):
    
     return dfoverf
 
-def full_session_l23(dfoverf):
+def full_session_l23(dfoverf, bin_size=None):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
     OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
@@ -114,7 +114,7 @@ def full_session_l23(dfoverf):
         
     return full_sess
 
-def full_session_trialsliced_l23(dfoverf):
+def full_session_trialsliced_l23(dfoverf, bin_size=None):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
     OUTPUT: full_sess is a numpy array of (num neurons, num_trials * num_timebins). flattens the data so all trials are 
@@ -163,9 +163,27 @@ def full_session_trialsliced_l23(dfoverf):
     for i in range(num_neurons):
         full_sess[i, :] = all_neurons[i]
 
-    return full_sess, trial_break_sliced
+    if bin_size:
+        binned = full_sess[:, ::bin_size]
 
-def gonogotrials_sliced_l23(dfoverf, gonogo):
+        # cumulative boundaries in the ORIGINAL (unbinned) timeline
+        cum_orig = np.concatenate(([0], np.cumsum(trial_break_sliced)))
+
+        # map those boundaries into the BINNED timeline
+        cum_binned = np.ceil(cum_orig / bin_size).astype(int)
+
+        # per-trial lengths in binned space = consecutive differences
+        trial_break_binned = np.diff(cum_binned)
+
+        print(f"size of full session: {full_sess.shape[1]} ")
+        print(f"size of binned: {binned.shape[1]} ")
+        return binned, trial_break_binned
+
+    else:
+        print(f"size of full session: {np.shape(full_sess)} ")
+        return full_sess, trial_break_sliced
+
+def gonogotrials_sliced_l23(dfoverf, gonogo, bin_size=None):
     """
     INPUT: dfoverf is a list, each item represents trial and is a numpy array of (num_neurons, num_timebins)
             gonogo is a 1d array of indices that represent which trials are go trials or nogo trials.
@@ -222,8 +240,10 @@ def gonogotrials_sliced_l23(dfoverf, gonogo):
     for i in range(num_neurons):
         gonogo_sess[i, :] = all_neurons[i]
 
-    return gonogo_sess
+    if bin_size:
+        gonogo_sess = gonogo_sess[:, ::bin_size]
 
+    return gonogo_sess
 
 
 def trace_sanity_check_l23(full_sess, random_seed=None):

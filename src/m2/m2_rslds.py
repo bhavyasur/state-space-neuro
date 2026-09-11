@@ -58,24 +58,41 @@ if __name__=="__main__":
     expert_073723 = "0501" # 83%
 
 
-    for m2_correct_only in [True, False]:
-        run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=naive_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
-        run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=interm_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
-        run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=expert_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
+    # for m2_correct_only in [True, False]:
+    #     run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=naive_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
+    #     run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=interm_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
+    #     run_rslds_pipeline(path_073723, disc_states, 15, plot_073723, DataType.M2, date=expert_073723, m2_sensor='Lick', trial_selection='left', m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
 
-    # for m2_sensor in ['WM1', 'Gate', 'WM2', 'CuePlayed', 'Lick']:
-    # for m2_sensor in ['WM1', 'CuePlayed', 'Lick']:
-    #     for trial_selection in [None, 'right', 'left']:
-    #         for m2_correct_only in [True, False]:
-    #             print("\n ------- RUNNING NAIVE, INTERM, EXPERT ON THE FOLLOWING: -------")
-    #             print(f"\n trial_selection: {trial_selection}")
-    #             print(f"\n m2_correct_only: {m2_correct_only}")
-    #             print(f"\n m2_sensor: {m2_sensor}")
 
-    #             run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=naive_073723, m2_sensor=m2_sensor, trial_selection=trial_selection, m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
-    #             run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=interm_073723, m2_sensor=m2_sensor, trial_selection=trial_selection, m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
-    #             run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=expert_073723, m2_sensor=m2_sensor, trial_selection=trial_selection, m2_correct_only=m2_correct_only, sensor_length='1.5s', bin_size=1)
+    for trial_selection in ['left']:
+        for m2_correct_only in [True]:
+            print("\n ------- RUNNING NAIVE, INTERM, EXPERT ON THE FOLLOWING: -------")
+            print(f"\n trial_selection: {trial_selection}")
+            print(f"\n m2_correct_only: {m2_correct_only}")
 
+            run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=naive_073723, trial_selection=trial_selection, m2_correct_only=m2_correct_only, bin_size=3)
+            run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=interm_073723, trial_selection=trial_selection, m2_correct_only=m2_correct_only, bin_size=3)
+            run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=expert_073723, trial_selection=trial_selection, m2_correct_only=m2_correct_only, bin_size=3)
+
+    # for trial_selection in [None, 'right', 'left']:
+    #     for m2_correct_only in [True, False]:
+    #         print("\n ------- RUNNING NAIVE, INTERM, EXPERT ON THE FOLLOWING: -------")
+    #         print(f"\n trial_selection: {trial_selection}")
+    #         print(f"\n m2_correct_only: {m2_correct_only}")
+
+    #         run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=naive_073723, trial_selection=trial_selection, m2_correct_only=m2_correct_only, bin_size=3)
+    #         run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=interm_073723, trial_selection=trial_selection, m2_correct_only=m2_correct_only, bin_size=3)
+    #         run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=expert_073723, trial_selection=trial_selection, m2_correct_only=m2_correct_only, bin_size=3)
+
+    # for trial_selection in [None, 'right', 'left']:
+    #     for m2_miss_only in [True]:
+    #         print("\n ------- RUNNING NAIVE, INTERM, EXPERT ON THE FOLLOWING: -------")
+    #         print(f"\n trial_selection: {trial_selection}")
+    #         print(f"\n m2_miss_only: {m2_miss_only}")
+
+    #         run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=naive_073723, trial_selection=trial_selection, m2_miss_only=m2_miss_only, bin_size=3)
+    #         run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=interm_073723, trial_selection=trial_selection, m2_miss_only=m2_miss_only, bin_size=3)
+    #         run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=expert_073723, trial_selection=trial_selection, m2_miss_only=m2_miss_only, bin_size=3)
 
     # -------------- full set --------------
     # run_rslds_pipeline(path_073723, disc_states, latent_dims, plot_073723, DataType.M2, date=naive_073723, bin_size=3)
